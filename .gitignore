@@ -1,0 +1,8 @@
+__pycache__/
+.venv/
+*.pyc
+*.db
+*.apkg
+anki_cards/
+helper_scripts/
+kindle_to_anki/__pycache__
