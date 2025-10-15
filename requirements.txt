@@ -1,0 +1,4 @@
+google
+genanki
+spacy
+google-generativeai

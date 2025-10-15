@@ -361,14 +361,14 @@ def create_en_de_model() -> genanki.Model:
 
 
 def create_de_en_model() -> genanki.Model:
-    """Creates the DE→EN card model (Deutsch → English)"""
+    """Creates the DE→EN Cloze card model (Deutsch → English with context cloze)"""
     
     # Fixed model ID for DE→EN (ensures consistent GUIDs across runs)
     model_id = 1607392320  # Hash of "Kindle_DE_EN"
     
     return genanki.Model(
         model_id,
-        'Kindle DE→EN',
+        'Kindle DE→EN Cloze',
         fields=[
             {'name': 'DE_gloss'},
             {'name': 'EN_lemma'},
@@ -379,7 +379,7 @@ def create_de_en_model() -> genanki.Model:
         ],
         templates=[
             {
-                'name': 'Deutsch → English',
+                'name': 'Deutsch → English Cloze',
                 'qfmt': '''<div class="card">
   {{#Book}}
   <div class="source">📚 {{Book}}</div>
@@ -391,7 +391,7 @@ def create_de_en_model() -> genanki.Model:
   {{#Context_HTML}}
   <div class="context">
     <div class="context-label">Kontext:</div>
-    {{Context_HTML}}
+    {{cloze:Context_HTML}}
   </div>
   {{/Context_HTML}}
 </div>''',
@@ -414,7 +414,7 @@ def create_de_en_model() -> genanki.Model:
   {{#Context_HTML}}
   <div class="context">
     <div class="context-label">Kontext:</div>
-    {{Context_HTML}}
+    {{cloze:Context_HTML}}
   </div>
   {{/Context_HTML}}
   
@@ -424,7 +424,8 @@ def create_de_en_model() -> genanki.Model:
 </div>''',
             }
         ],
-        css=BASE_CSS + DE_EN_ANSWER_CSS + NIGHT_MODE_CSS
+        css=BASE_CSS + DE_EN_ANSWER_CSS + NIGHT_MODE_CSS,
+        model_type=genanki.Model.CLOZE
     )
 
 

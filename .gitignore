@@ -6,3 +6,4 @@ __pycache__/
 anki_cards/
 helper_scripts/
 kindle_to_anki/__pycache__
+.DS_Store
