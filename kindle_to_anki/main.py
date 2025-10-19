@@ -5,142 +5,143 @@ Orchestrates the entire ETL pipeline: Database → Gemini → TSV → APKG
 
 import time
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, List, Sequence
 
 # Import all modules
-from .config import CONFIG, SPACY_MODELS
-from .database import connect_to_db, get_vocabulary_data, separate_by_language
+from .config import (
+    CONFIG,
+    SPACY_MODELS,
+    get_language_meta,
+    validate_language_configuration,
+)
+from .database import connect_to_db, get_vocabulary_data, filter_vocabulary_by_language
 from .normalization import lemmatize_word, normalize_book_title, load_book_titles_from_cache
 from .gemini_api import setup_gemini_api, process_batch_with_gemini
-from .cache import (load_translated_cache, save_translated_cache, add_to_cache, 
-                    is_word_translated, get_cache_stats)
-from .export import create_all_tsv_files, export_to_apkg, remove_duplicates, filter_valid_cards
-from .utils import log_error, print_stats, count_api_calls, save_progress, load_progress
+from .cache import (
+    add_to_cache,
+    get_cache_stats,
+    is_word_translated,
+    load_translated_cache,
+    save_translated_cache,
+)
+from .export import create_all_tsv_files, export_to_apkg, filter_valid_cards, remove_duplicates
+from .utils import log_error, load_progress, print_stats
 
-# spaCy models - will be loaded on first use
-nlp_en = None
-nlp_de = None
-spacy_loaded = False
+# spaCy models - lazily loaded per language
+NLP_MODELS: Dict[str, object] = {}
+SPACY_IMPORT_FAILED = False
 
 
-def load_spacy_models(verbose: bool = False):
-    """Load spaCy models on demand"""
-    global nlp_en, nlp_de, spacy_loaded
-    
-    if spacy_loaded:
+def load_spacy_models(languages: Sequence[str], verbose: bool = False):
+    """Ensure spaCy models for the requested languages are loaded."""
+
+    global SPACY_IMPORT_FAILED
+
+    normalized_languages = [lang.lower() for lang in languages if lang]
+    if not normalized_languages or SPACY_IMPORT_FAILED:
         return
-    
+
     try:
-        import spacy
-        
-        for lang, model_name in SPACY_MODELS.items():
-            try:
-                if lang == 'en':
-                    if verbose:
-                        print(f"  📚 Loading spaCy model: {model_name}")
-                    nlp_en = spacy.load(model_name)
-                elif lang == 'de':
-                    if verbose:
-                        print(f"  📚 Loading spaCy model: {model_name}")
-                    nlp_de = spacy.load(model_name)
-            except OSError:
-                if verbose:
-                    print(f"  ⚠️  spaCy model '{model_name}' not found!")
-                    print(f"     Install with: python -m spacy download {model_name}")
-        
-        spacy_loaded = True
-    
+        import spacy  # type: ignore
     except ImportError:
+        SPACY_IMPORT_FAILED = True
         if verbose:
-            print("  ⚠️  spaCy not installed! Lemmatization will use Gemini fallback.")
+            print("  ⚠️  spaCy not installed! Lemmatization will fall back to lowercase only.")
             print("     Install with: pip install spacy")
-        spacy_loaded = True
+        return
+
+    for lang in normalized_languages:
+        if lang in NLP_MODELS:
+            continue
+
+        model_name = SPACY_MODELS.get(lang)
+        if not model_name:
+            if verbose:
+                print(f"  ⚠️  No spaCy model configured for '{lang}'.")
+            NLP_MODELS[lang] = None
+            continue
+
+        try:
+            if verbose:
+                print(f"  📚 Loading spaCy model: {model_name}")
+            NLP_MODELS[lang] = spacy.load(model_name)
+        except OSError:
+            NLP_MODELS[lang] = None
+            if verbose:
+                print(f"  ⚠️  spaCy model '{model_name}' not found!")
+                print(f"     Install with: python -m spacy download {model_name}")
 
 
-def process_language_batch(words: List[Dict], language: str, genai, cache: Dict, 
-                           verbose: bool = False) -> List[Dict]:
-    """
-    Process a batch of words for a specific language
-    
-    Args:
-        words: List of word dictionaries from database
-        language: 'en' or 'de'
-        genai: Gemini API instance
-        cache: Translation cache
-        verbose: Enable verbose output
-        
-    Returns:
-        List of processed cards
-    """
+def process_language_batch(words: List[Dict], language: str,
+                           native_language: str, target_language: str,
+                           genai, cache: Dict, verbose: bool = False) -> List[Dict]:
+    """Process a batch of vocabulary entries for a specific language."""
+
     if not words:
         return []
-    
-    # Lemmatize words and prepare batch
-    nlp = nlp_en if language == 'en' else nlp_de
-    
-    words_batch = []
+
+    language = language.lower()
+    native_language = native_language.lower()
+    target_language = target_language.lower()
+
+    words_batch: List[Dict] = []
     for word_data in words:
         word = word_data['word']
-        lemma = lemmatize_word(word, language, nlp_en, nlp_de)
-        
-        # Normalize book title
+        lemma = word_data.get('lemma') or lemmatize_word(
+            word,
+            language,
+            nlp_models=NLP_MODELS,
+        )
+
         book_title = normalize_book_title(
             word_data.get('book', 'Unknown'),
             author_from_db=word_data.get('authors'),
             genai_instance=genai,
-            verbose=verbose
+            verbose=verbose,
         )
-        
+
         words_batch.append({
             'word': word,
             'lemma': lemma,
             'usage': word_data.get('usage', ''),
-            'book': book_title
+            'book': book_title,
         })
-    
-    # Split into batches for API
+
     batch_size = CONFIG.get('BATCH_SIZE', 20)
     batches = [words_batch[i:i + batch_size] for i in range(0, len(words_batch), batch_size)]
-    
-    all_cards = []
-    quota_exceeded = False
-    
-    lang_flag = "🇬🇧" if language == 'en' else "🇩🇪"
-    lang_name = "English" if language == 'en' else "German"
-    
+
+    all_cards: List[Dict] = []
+    lang_flag = f"[{language.upper()}]"
+
     for i, batch in enumerate(batches, 1):
-        if quota_exceeded:
-            if verbose:
-                print(f"  ⏸️  Batch {i}/{len(batches)} skipped (quota limit)")
-            continue
-        
         if verbose:
             print(f"  {lang_flag} Batch {i}/{len(batches)} ({len(batch)} words)...", end=" ")
-        
-        # Process with Gemini
-        cards = process_batch_with_gemini(batch, language, genai, verbose=verbose, batch_num=i)
-        
+
+        cards = process_batch_with_gemini(
+            batch,
+            language,
+            native_language,
+            target_language,
+            genai,
+            verbose=verbose,
+            batch_num=i,
+        )
+
         if cards:
             all_cards.extend(cards)
-            
-            # Add to cache (with duplicate detection and book normalization)
-            add_to_cache(cards, batch, language, cache, verbose=verbose)
-            
-            # Save cache after each batch
+            add_to_cache(cards, batch, language, cache, native_language, verbose=verbose)
             save_translated_cache(cache, CONFIG['TRANSLATED_CACHE'], verbose=False)
-            
+
             if verbose:
                 print(f"✅ {len(cards)} cards")
         else:
-            # Check if quota was exceeded
             if verbose:
                 print("❌ Failed")
-            
-        # Delay between batches
-        if i < len(batches) and not quota_exceeded:
+
+        if i < len(batches):
             delay = CONFIG.get('DELAY_BETWEEN_BATCHES', 4.5)
             time.sleep(delay)
-    
+
     return all_cards
 
 
@@ -149,165 +150,205 @@ def main():
     Main entry point for Kindle to Anki converter
     """
     start_time = time.time()
-    
     verbose = CONFIG.get('VERBOSE', False)
-    
+    native_language, target_language = validate_language_configuration()
+    native_meta = get_language_meta(native_language)
+    target_meta = get_language_meta(target_language)
+
     print("=" * 70)
     print("Kindle to Anki Converter v2.0")
     print("=" * 70)
     print()
-    
-    # 1. Configuration overview
+
     if verbose:
         print("📋 Configuration:")
-        print(f"  - Database:      {CONFIG['VOCAB_DB_PATH']}")
-        print(f"  - TSV output:    {CONFIG['TSV_OUTPUT_DIR']}")
-        print(f"  - APKG output:   {CONFIG['APKG_OUTPUT_DIR']}")
-        print(f"  - Batch size:    {CONFIG['BATCH_SIZE']}")
-        print(f"  - Batch delay:   {CONFIG['DELAY_BETWEEN_BATCHES']}s")
-        print(f"  - Max retries:   {CONFIG['MAX_RETRIES']}")
-        print(f"  - API key set:   {'✅' if CONFIG['GEMINI_API_KEY'] else '❌'}")
-        print(f"  - Skip cached:   {'✅' if CONFIG['SKIP_TRANSLATED'] else '❌'}")
-        print(f"  - Create APKG:   {'✅' if CONFIG['CREATE_APKG'] else '❌'}")
+        print(f"  - Database:            {CONFIG['VOCAB_DB_PATH']}")
+        print(f"  - TSV output:          {CONFIG['TSV_OUTPUT_DIR']}")
+        print(f"  - APKG output:         {CONFIG['APKG_OUTPUT_DIR']}")
+        print(f"  - Native language:     {native_meta['english_name']} ({native_language.upper()})")
+        print(f"  - Target language:     {target_meta['english_name']} ({target_language.upper()})")
+        print(f"  - Batch size:          {CONFIG['BATCH_SIZE']}")
+        print(f"  - Batch delay:         {CONFIG['DELAY_BETWEEN_BATCHES']}s")
+        print(f"  - Skip translated:     {'✅' if CONFIG.get('SKIP_TRANSLATED') else '❌'}")
+        print(f"  - Create APKG:         {'✅' if CONFIG.get('CREATE_APKG') else '❌'}")
+        print(f"  - Decks (foreign→native / native→foreign / native→native): "
+              f"{CONFIG.get('CREATE_FOREIGN_TO_NATIVE', True)} / "
+              f"{CONFIG.get('CREATE_NATIVE_TO_FOREIGN', True)} / "
+              f"{CONFIG.get('CREATE_NATIVE_TO_NATIVE', True)}")
         print()
-    
-    # 2. Load vocabulary from database
+
     print("📚 Loading vocabulary from database...")
     try:
         conn = connect_to_db(CONFIG['VOCAB_DB_PATH'])
         vocab_data = get_vocabulary_data(conn)
-        en_words, de_words = separate_by_language(vocab_data)
         conn.close()
+
+        target_words = filter_vocabulary_by_language(vocab_data, target_language)
+        native_words = filter_vocabulary_by_language(vocab_data, native_language)
+
+        print(f"  - Total entries: {len(vocab_data)}")
+        print(f"  - {target_meta['english_name']} ({target_language.upper()}): {len(target_words)} words")
+        if native_language != target_language:
+            print(f"  - {native_meta['english_name']} ({native_language.upper()}): {len(native_words)} words")
         
-        print(f"  - Total: {len(vocab_data)} words")
-        print(f"  - English: {len(en_words)} words")
-        print(f"  - German: {len(de_words)} words")
+        # Check for unexpected languages
+        configured_languages = {native_language, target_language}
+        found_languages = set()
+        for entry in vocab_data:
+            lang = entry.get('lang_normalized', '').lower()
+            if lang and lang not in configured_languages:
+                found_languages.add(lang)
+        
+        if found_languages:
+            print()
+            print("  ⚠️  Warning: Found vocabulary in unsupported languages:")
+            for lang in sorted(found_languages):
+                lang_count = sum(1 for e in vocab_data if e.get('lang_normalized', '').lower() == lang)
+                try:
+                    lang_meta = get_language_meta(lang)
+                    lang_name = lang_meta['english_name']
+                except ValueError:
+                    lang_name = lang.upper()
+                print(f"      - {lang_name} ({lang.upper()}): {lang_count} words")
+            print(f"      These words will be IGNORED (not SOURCE or TARGET language).")
+        
         print()
-    
-    except Exception as e:
-        print(f"❌ Database error: {e}")
-        log_error(f"Database error: {e}", CONFIG['ERROR_LOG'], verbose)
+
+    except Exception as exc:
+        print(f"❌ Database error: {exc}")
+        log_error(f"Database error: {exc}", CONFIG['ERROR_LOG'], verbose)
         return
-    
-    # 2.5 Load spaCy models (only if needed)
-    if en_words or de_words:
+
+    process_foreign_decks = CONFIG.get('CREATE_FOREIGN_TO_NATIVE', True) or CONFIG.get('CREATE_NATIVE_TO_FOREIGN', True)
+    process_native_deck = CONFIG.get('CREATE_NATIVE_TO_NATIVE', True)
+
+    languages_to_load: List[str] = []
+    if process_foreign_decks and target_words:
+        languages_to_load.append(target_language)
+    if process_native_deck and native_words:
+        languages_to_load.append(native_language)
+
+    if languages_to_load:
         if verbose:
             print("📚 Loading NLP models...")
-        load_spacy_models(verbose)
+        load_spacy_models(languages_to_load, verbose=verbose)
         if verbose:
             print()
-    
-    # 3. Load translation cache
+
     print("📦 Loading cache...")
     cache = load_translated_cache(CONFIG['TRANSLATED_CACHE'], verbose=verbose)
-    
-    # Load book titles into RAM for consistent formatting
     load_book_titles_from_cache(cache, verbose=verbose)
-    
-    # Load progress (optional resume support)
-    progress = load_progress(CONFIG.get('PROGRESS_FILE', 'anki_cards/progress.json'), verbose=False)
-    
-    # Filter already translated words (with lemmatization!)
+
+    load_progress(CONFIG.get('PROGRESS_FILE', 'anki_cards/progress.json'), verbose=False)
+
     if CONFIG.get('SKIP_TRANSLATED'):
-        en_original = len(en_words)
-        de_original = len(de_words)
-        
-        # Lemmatize words BEFORE checking cache (critical!)
-        for w in en_words:
-            w['lemma'] = lemmatize_word(w['word'], 'en', nlp_en, nlp_de)
-        for w in de_words:
-            w['lemma'] = lemmatize_word(w['word'], 'de', nlp_en, nlp_de)
-        
-        # Filter by lemma (not by original word!)
-        en_words = [w for w in en_words if not is_word_translated(cache, w['lemma'], 'en')]
-        de_words = [w for w in de_words if not is_word_translated(cache, w['lemma'], 'de')]
-        
-        en_skipped = en_original - len(en_words)
-        de_skipped = de_original - len(de_words)
-        
-        if verbose:
-            print(f"  - Skipped {en_skipped} cached English words")
-            print(f"  - Skipped {de_skipped} cached German words")
-        
-        print(f"  - New English words: {len(en_words)}")
-        print(f"  - New German words: {len(de_words)}")
+        if process_foreign_decks and target_words:
+            original = len(target_words)
+            for word in target_words:
+                word['lemma'] = lemmatize_word(word['word'], target_language, nlp_models=NLP_MODELS)
+            target_words = [w for w in target_words if not is_word_translated(cache, w['lemma'], target_language)]
+            skipped = original - len(target_words)
+            print(f"  - Skipped {skipped} cached {target_meta['english_name']} words")
+            print(f"  - New {target_meta['english_name']} words: {len(target_words)}")
+
+        if process_native_deck and native_words:
+            original_native = len(native_words)
+            for word in native_words:
+                word['lemma'] = lemmatize_word(word['word'], native_language, nlp_models=NLP_MODELS)
+            native_words = [w for w in native_words if not is_word_translated(cache, w['lemma'], native_language)]
+            skipped_native = original_native - len(native_words)
+            print(f"  - Skipped {skipped_native} cached {native_meta['english_name']} words")
+            print(f"  - New {native_meta['english_name']} words: {len(native_words)}")
+
         print()
-    
-    # 4. Initialize Gemini API (or skip for DRY_RUN)
+
     if CONFIG.get('DRY_RUN'):
         genai = None
         print("⚠️  DRY RUN mode - no API calls")
         print("   Skipping Gemini processing...")
         print()
-        en_cards_new = []
-        de_cards_new = []
     else:
         print("🤖 Initializing Gemini API...")
         genai = setup_gemini_api(CONFIG['GEMINI_API_KEY'], verbose=verbose)
-        
         if not genai:
             print("❌ Failed to initialize Gemini API")
             return
-        
         print()
-        
-        # 5. Process English words
-        en_cards_new = []
-        if CONFIG.get('CREATE_EN_DE_CARDS') and en_words:
-            print(f"🇬🇧 Processing {len(en_words)} English words...")
-            en_cards_new = process_language_batch(en_words, 'en', genai, cache, verbose=verbose)
+
+        if process_foreign_decks and target_words:
+            print(f"� Processing {len(target_words)} {target_meta['english_name']} words...")
+            process_language_batch(
+                target_words,
+                target_language,
+                native_language,
+                target_language,
+                genai,
+                cache,
+                verbose=verbose,
+            )
             print()
-        
-        # 6. Process German words
-        de_cards_new = []
-        if CONFIG.get('CREATE_DE_DE_CARDS') and de_words:
-            print(f"🇩🇪 Processing {len(de_words)} German words...")
-            de_cards_new = process_language_batch(de_words, 'de', genai, cache, verbose=verbose)
+
+        if process_native_deck and native_words:
+            print(f"� Processing {len(native_words)} {native_meta['english_name']} words...")
+            process_language_batch(
+                native_words,
+                native_language,
+                native_language,
+                target_language,
+                genai,
+                cache,
+                verbose=verbose,
+            )
             print()
-    
-    # 7. Combine new cards with cached cards
-    all_en_cards = list(cache.get('en_words', {}).values())
-    all_de_cards = list(cache.get('de_words', {}).values())
-    
-    # 8. Remove duplicates and validate
-    all_en_cards = remove_duplicates(all_en_cards, language='en')
-    all_de_cards = remove_duplicates(all_de_cards, language='de')
-    
-    all_en_cards = filter_valid_cards(all_en_cards, 'en_de', verbose=verbose)
-    all_de_cards = filter_valid_cards(all_de_cards, 'de_de', verbose=verbose)
-    
-    # 9. Create TSV files
+
+    language_buckets = cache.get('languages', {})
+    foreign_cards_all = list(language_buckets.get(target_language, {}).values()) if process_foreign_decks else []
+    native_cards_all = list(language_buckets.get(native_language, {}).values()) if process_native_deck else []
+
+    foreign_cards = remove_duplicates(foreign_cards_all, target_language) if foreign_cards_all else []
+    native_cards = remove_duplicates(native_cards_all, native_language) if native_cards_all else []
+
+    if foreign_cards:
+        foreign_cards = filter_valid_cards(foreign_cards, 'foreign_native', native_language, target_language, verbose=verbose)
+    if native_cards:
+        native_cards = filter_valid_cards(native_cards, 'native_native', native_language, target_language, verbose=verbose)
+
     print("📝 Creating TSV files...")
-    create_all_tsv_files(all_en_cards, all_de_cards, verbose=verbose)
+    create_all_tsv_files(foreign_cards, native_cards, native_language, target_language, verbose=verbose)
     print()
-    
-    # 10. Create APKG packages (optional)
+
     if CONFIG.get('CREATE_APKG'):
         print("📦 Creating APKG packages...")
         try:
-            export_to_apkg(
-                CONFIG['TSV_OUTPUT_DIR'],
-                CONFIG['APKG_OUTPUT_DIR'],
-                verbose=verbose
-            )
+            export_to_apkg(CONFIG['TSV_OUTPUT_DIR'], CONFIG['APKG_OUTPUT_DIR'], verbose=verbose)
             print()
-        except Exception as e:
-            print(f"⚠️  APKG export failed: {e}")
+        except Exception as exc:
+            print(f"⚠️  APKG export failed: {exc}")
             print("   TSV files are available for manual import")
             print()
-    
-    # 11. Print final statistics
+
     processing_time = time.time() - start_time
     cache_stats = get_cache_stats(cache)
-    
-    print_stats(all_en_cards, all_de_cards, cache_stats, processing_time, verbose=True)
-    
+
+    deck_counts: Dict[str, int] = {}
+    if foreign_cards:
+        if CONFIG.get('CREATE_FOREIGN_TO_NATIVE', True):
+            deck_counts[f"{target_language.upper()}→{native_language.upper()}"] = len(foreign_cards)
+        if CONFIG.get('CREATE_NATIVE_TO_FOREIGN', True):
+            deck_counts[f"{native_language.upper()}→{target_language.upper()}"] = len(foreign_cards)
+    if native_cards and CONFIG.get('CREATE_NATIVE_TO_NATIVE', True):
+        deck_counts[f"{native_language.upper()}→{native_language.upper()}"] = len(native_cards)
+
+    print_stats(deck_counts, cache_stats, processing_time, verbose=True)
+
     print("📁 Output:")
     if CONFIG.get('CREATE_APKG'):
         print(f"   APKG files: {Path(CONFIG['APKG_OUTPUT_DIR']).absolute()}")
     print(f"   TSV files:  {Path(CONFIG['TSV_OUTPUT_DIR']).absolute()}")
     print()
-    
+
+    if deck_counts:
+        print("🔁 Re-importing updates existing cards thanks to stable GUIDs.")
     print("💡 Tip: On next run, cached words are automatically skipped!")
     print("   Only new vocabulary will be processed.")
     print()

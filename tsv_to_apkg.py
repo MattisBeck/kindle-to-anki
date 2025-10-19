@@ -7,9 +7,16 @@ Converts Anki TSV files to APKG packages with custom card templates
 import genanki
 import csv
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import Dict, List, Optional
 import random
 import hashlib
+
+from kindle_to_anki.config import (
+  build_field_key,
+  format_language_pair,
+  get_language_meta,
+  validate_language_configuration,
+)
 
 # ============================================================================
 # Card Templates & Styling
@@ -292,203 +299,229 @@ DE_DE_ANSWER_CSS = """
 # Model Definitions (Anki Note Types)
 # ============================================================================
 
-def create_en_de_model() -> genanki.Model:
-    """Creates the EN→DE card model (English → Deutsch)"""
-    
-    # Fixed model ID for EN→DE (ensures consistent GUIDs across runs)
-    model_id = 1607392319  # Hash of "Kindle_EN_DE"
-    
-    return genanki.Model(
-        model_id,
-        'Kindle EN→DE',
-        fields=[
-            {'name': 'EN_lemma'},
-            {'name': 'EN_definition'},
-            {'name': 'DE_gloss'},
+
+def generate_model_id(deck_type: str, native_language: str, target_language: str) -> int:
+    """Create a stable, deck-specific model ID."""
+    base = f"Kindle::{deck_type}:{native_language}:{target_language}"
+    digest = hashlib.md5(base.encode('utf-8')).digest()
+    return int.from_bytes(digest[:4], byteorder='big') & 0x7FFFFFFF
+
+
+def create_model(deck_type: str, native_language: str, target_language: str) -> genanki.Model:
+    """Create a genanki.Model instance for the requested deck type."""
+
+    native_meta = get_language_meta(native_language)
+    target_meta = get_language_meta(target_language)
+
+    model_id = generate_model_id(deck_type, native_language, target_language)
+
+    native_lemma_key = build_field_key(native_language, 'lemma')
+    native_definition_key = build_field_key(native_language, 'definition')
+    native_gloss_key = build_field_key(native_language, 'gloss')
+    target_lemma_key = build_field_key(target_language, 'lemma')
+    target_definition_key = build_field_key(target_language, 'definition')
+
+    if deck_type == 'foreign_native':
+        model_name = f"Kindle {target_language.upper()}→{native_language.upper()}"
+        type_label = f"{target_meta['gemini_label']} → {native_meta['gemini_label']}"
+        fields = [
+            {'name': target_lemma_key},
+            {'name': target_definition_key},
+            {'name': native_gloss_key},
             {'name': 'Context_HTML'},
             {'name': 'Book'},
             {'name': 'Notes'},
-        ],
-        templates=[
-            {
-                'name': 'English → Deutsch',
-                'qfmt': '''<div class="card">
-  {{#Book}}
-  <div class="source">📚 {{Book}}</div>
-  {{/Book}}
+        ]
+
+        qfmt = """<div class="card">
+  {{{{#Book}}}}
+  <div class="source">📚 {{{{Book}}}}</div>
+  {{{{/Book}}}}
   
-  <div class="type">English → Deutsch</div>
-  <div class="question">{{EN_lemma}}</div>
+  <div class="type">{type_label}</div>
+  <div class="question">{{{{{target_lemma}}}}}</div>
   
-  {{#Context_HTML}}
+  {{{{#Context_HTML}}}}
   <div class="context">
     <div class="context-label">Kontext:</div>
-    {{Context_HTML}}
+    {{{{Context_HTML}}}}
   </div>
-  {{/Context_HTML}}
-</div>''',
-                'afmt': '''<div class="card">
-  {{#Book}}
-  <div class="source">📚 {{Book}}</div>
-  {{/Book}}
+  {{{{/Context_HTML}}}}
+</div>""".format(type_label=type_label, target_lemma=target_lemma_key)
+
+        afmt = """<div class="card">
+  {{{{#Book}}}}
+  <div class="source">📚 {{{{Book}}}}</div>
+  {{{{/Book}}}}
   
-  <div class="type">English → Deutsch</div>
-  <div class="question question--small">{{EN_lemma}}</div>
+  <div class="type">{type_label}</div>
+  <div class="question question--small">{{{{{target_lemma}}}}}</div>
   
   <hr id="answer">
   
-  <div class="answer">{{DE_gloss}}</div>
+  <div class="answer">{{{{{native_gloss}}}}}</div>
   
-  {{#EN_definition}}
-  <div class="definition">{{EN_definition}}</div>
-  {{/EN_definition}}
+  {{{{#{target_definition}}}}}
+  <div class="definition">{{{{{target_definition}}}}}</div>
+  {{{{/{target_definition}}}}}
   
-  {{#Context_HTML}}
+  {{{{#Context_HTML}}}}
   <div class="context">
     <div class="context-label">Kontext:</div>
-    {{Context_HTML}}
+    {{{{Context_HTML}}}}
   </div>
-  {{/Context_HTML}}
+  {{{{/Context_HTML}}}}
   
-  {{#Notes}}
-  <div class="notes">💡 {{Notes}}</div>
-  {{/Notes}}
-</div>''',
-            }
-        ],
-        css=BASE_CSS + EN_DE_ANSWER_CSS + NIGHT_MODE_CSS
-    )
+  {{{{#Notes}}}}
+  <div class="notes">💡 {{{{Notes}}}}</div>
+  {{{{/Notes}}}}
+</div>""".format(
+            type_label=type_label,
+            target_lemma=target_lemma_key,
+            native_gloss=native_gloss_key,
+            target_definition=target_definition_key,
+        )
 
+        css = BASE_CSS + EN_DE_ANSWER_CSS + NIGHT_MODE_CSS
+        model_kwargs = {}
 
-def create_de_en_model() -> genanki.Model:
-    """Creates the DE→EN card model (Deutsch → English with context cloze)"""
-    
-    # Fixed model ID for DE→EN (ensures consistent GUIDs across runs)
-    model_id = 1607392320  # Hash of "Kindle_DE_EN"
-    
-    return genanki.Model(
-        model_id,
-        'Kindle DE→EN',
-        fields=[
-            {'name': 'DE_gloss'},
-            {'name': 'EN_lemma'},
-            {'name': 'EN_definition'},
+    elif deck_type == 'native_foreign':
+        model_name = f"Kindle {native_language.upper()}→{target_language.upper()}"
+        type_label = f"{native_meta['gemini_label']} → {target_meta['gemini_label']}"
+        fields = [
+            {'name': native_gloss_key},
+            {'name': target_lemma_key},
+            {'name': target_definition_key},
             {'name': 'Context_HTML'},
             {'name': 'Book'},
             {'name': 'Notes'},
-        ],
-        templates=[
-            {
-                'name': 'Deutsch → English Cloze',
-                'qfmt': '''<div class="card">
-  {{#Book}}
-  <div class="source">📚 {{Book}}</div>
-  {{/Book}}
+        ]
+
+        qfmt = """<div class="card">
+  {{{{#Book}}}}
+  <div class="source">📚 {{{{Book}}}}</div>
+  {{{{/Book}}}}
   
-  <div class="type">Deutsch → English</div>
-  <div class="question">{{DE_gloss}}</div>
+  <div class="type">{type_label}</div>
+  <div class="question">{{{{{native_gloss}}}}}</div>
   
-  {{#Context_HTML}}
+  {{{{#Context_HTML}}}}
   <div class="context">
     <div class="context-label">Kontext:</div>
-    {{cloze:Context_HTML}}
+    {{{{cloze:Context_HTML}}}}
   </div>
-  {{/Context_HTML}}
-</div>''',
-                'afmt': '''<div class="card">
-  {{#Book}}
-  <div class="source">📚 {{Book}}</div>
-  {{/Book}}
+  {{{{/Context_HTML}}}}
+</div>""".format(type_label=type_label, native_gloss=native_gloss_key)
+
+        afmt = """<div class="card">
+  {{{{#Book}}}}
+  <div class="source">📚 {{{{Book}}}}</div>
+  {{{{/Book}}}}
   
-  <div class="type">Deutsch → English</div>
-  <div class="question question--small">{{DE_gloss}}</div>
+  <div class="type">{type_label}</div>
+  <div class="question question--small">{{{{{native_gloss}}}}}</div>
   
   <hr id="answer">
   
-  <div class="answer">{{EN_lemma}}</div>
+  <div class="answer">{{{{{target_lemma}}}}}</div>
   
-  {{#EN_definition}}
-  <div class="definition">{{EN_definition}}</div>
-  {{/EN_definition}}
+  {{{{#{target_definition}}}}}
+  <div class="definition">{{{{{target_definition}}}}}</div>
+  {{{{/{target_definition}}}}}
   
-  {{#Context_HTML}}
+  {{{{#Context_HTML}}}}
   <div class="context">
     <div class="context-label">Kontext:</div>
-    {{cloze:Context_HTML}}
+    {{{{cloze:Context_HTML}}}}
   </div>
-  {{/Context_HTML}}
+  {{{{/Context_HTML}}}}
   
-  {{#Notes}}
-  <div class="notes">💡 {{Notes}}</div>
-  {{/Notes}}
-</div>''',
-            }
-        ],
-        css=BASE_CSS + DE_EN_ANSWER_CSS + NIGHT_MODE_CSS,
-        model_type=genanki.Model.CLOZE
-    )
+  {{{{#Notes}}}}
+  <div class="notes">💡 {{{{Notes}}}}</div>
+  {{{{/Notes}}}}
+</div>""".format(
+            type_label=type_label,
+            native_gloss=native_gloss_key,
+            target_lemma=target_lemma_key,
+            target_definition=target_definition_key,
+        )
 
+        css = BASE_CSS + DE_EN_ANSWER_CSS + NIGHT_MODE_CSS
+        model_kwargs = {'model_type': genanki.Model.CLOZE}
 
-def create_de_de_model() -> genanki.Model:
-    """Creates the DE→DE card model (Deutsche Vokabel)"""
-    
-    # Fixed model ID for DE→DE (ensures consistent GUIDs across runs)
-    model_id = 1607392321  # Hash of "Kindle_DE_DE"
-    
-    return genanki.Model(
-        model_id,
-        'Kindle DE→DE',
-        fields=[
-            {'name': 'DE_lemma'},
-            {'name': 'DE_definition'},
+    else:  # native_native
+        model_name = f"Kindle {native_language.upper()}→{native_language.upper()}"
+        type_label = f"{native_meta['gemini_label']} → {native_meta['gemini_label']}"
+        fields = [
+            {'name': native_lemma_key},
+            {'name': native_definition_key},
             {'name': 'Context_HTML'},
             {'name': 'Book'},
             {'name': 'Notes'},
-        ],
-        templates=[
-            {
-                'name': 'Deutsche Vokabel',
-                'qfmt': '''<div class="card">
-  {{#Book}}
-  <div class="source">📚 {{Book}}</div>
-  {{/Book}}
+        ]
+
+        qfmt = """<div class="card">
+  {{{{#Book}}}}
+  <div class="source">📚 {{{{Book}}}}</div>
+  {{{{/Book}}}}
   
-  <div class="type">Deutsche Vokabel</div>
-  <div class="question">{{DE_lemma}}</div>
+  <div class="type">{type_label}</div>
+  <div class="question">{{{{{native_lemma}}}}}</div>
   
-  {{#Context_HTML}}
+  {{{{#Context_HTML}}}}
   <div class="context">
     <div class="context-label">Kontext:</div>
-    {{Context_HTML}}
+    {{{{Context_HTML}}}}
   </div>
-  {{/Context_HTML}}
-</div>''',
-                'afmt': '''<div class="card">
-  {{#Book}}
-  <div class="source">📚 {{Book}}</div>
-  {{/Book}}
+  {{{{/Context_HTML}}}}
+</div>""".format(type_label=type_label, native_lemma=native_lemma_key)
+
+        afmt = """<div class="card">
+  {{{{#Book}}}}
+  <div class="source">📚 {{{{Book}}}}</div>
+  {{{{/Book}}}}
   
-  <div class="type">Deutsche Vokabel</div>
-  <div class="question question--small">{{DE_lemma}}</div>
+  <div class="type">{type_label}</div>
+  <div class="question question--small">{{{{{native_lemma}}}}}</div>
   
   <hr id="answer">
   
-  <div class="answer">{{DE_definition}}</div>
+  <div class="answer">{{{{{native_definition}}}}}</div>
   
-  {{#Context_HTML}}
+  {{{{#Context_HTML}}}}
   <div class="context">
     <div class="context-label">Kontext:</div>
-    {{Context_HTML}}
+    {{{{Context_HTML}}}}
   </div>
-  {{/Context_HTML}}
+  {{{{/Context_HTML}}}}
   
-  {{#Notes}}
-  <div class="notes">💡 {{Notes}}</div>
-  {{/Notes}}
-</div>''',
-            }
-        ],
-        css=BASE_CSS + DE_DE_ANSWER_CSS + NIGHT_MODE_CSS
+  {{{{#Notes}}}}
+  <div class="notes">💡 {{{{Notes}}}}</div>
+  {{{{/Notes}}}}
+</div>""".format(
+            type_label=type_label,
+            native_lemma=native_lemma_key,
+            native_definition=native_definition_key,
+        )
+
+        css = BASE_CSS + DE_DE_ANSWER_CSS + NIGHT_MODE_CSS
+        model_kwargs = {}
+
+    templates = [
+        {
+            'name': deck_type,
+            'qfmt': qfmt,
+            'afmt': afmt,
+        }
+    ]
+
+    return genanki.Model(
+        model_id,
+        model_name,
+        fields=fields,
+        templates=templates,
+        css=css,
+        **model_kwargs,
     )
 
 
@@ -506,10 +539,10 @@ def generate_guid_from_lemma(lemma: str, model_id: int, card_type: str = '') -> 
     Beim Re-Import werden alte Karten mit gleichem Lemma UND Typ überschrieben,
     aber der Learning-Fortschritt bleibt erhalten!
     
-    Args:
-        lemma: Das Lemma (erstes Feld der Karte)
-        model_id: Die Model-ID
-        card_type: Der Kartentyp ('en_de', 'de_en', 'de_de') für zusätzliche Eindeutigkeit
+  Args:
+    lemma: Das Lemma (erstes Feld der Karte)
+    model_id: Die Model-ID
+    card_type: Der Kartentyp ('foreign_native', 'native_foreign', 'native_native') für zusätzliche Eindeutigkeit
     
     Returns:
         GUID als Integer
@@ -531,220 +564,226 @@ def generate_guid_from_lemma(lemma: str, model_id: int, card_type: str = '') -> 
 def convert_bold_to_cloze(html: str) -> str:
     """
     Konvertiert <b>word</b> zu {{c1::word}} für Cloze-Karten.
-    
+
     Für DE→EN Karten: Das englische Wort wird versteckt (cloze),
     damit es nicht gespoilert wird.
-    
+
     Args:
         html: HTML-String mit <b>word</b> Markierung
-    
+
     Returns:
         HTML-String mit {{c1::word}} Cloze-Markierung
     """
+
+    if not html:
+        return ''
+
     import re
+
     # Ersetze <b>...</b> mit {{c1::...}}
     result = re.sub(r'<b>(.*?)</b>', r'{{c1::\1}}', html)
     return result
 
 
+def convert_cloze_to_bold(html: str) -> str:
+    """Konvertiert die erste Cloze-Markierung zurück zu <b>…</b>."""
 
-def read_tsv_file(tsv_path: Path, card_type: str) -> List[List[str]]:
-    """
-    Reads a TSV file and returns rows mapped to the correct APKG field order
-    
-    TSV structure:
-    - EN→DE (anki_en_de.tsv): EN_lemma | Original_word | EN_definition | DE_gloss | Context_HTML | Book | Notes
-    - DE→EN (anki_de_en.tsv): DE_gloss | EN_lemma | Original_word | EN_definition | Context_HTML | Book | Notes
-    - DE→DE (anki_de_de.tsv): DE_lemma | Original_word | DE_definition | Context_HTML | Book | Notes
-    
-    For EN words (anki_en_de.tsv):
-        - EN_lemma = English lemma (e.g., "go")
-        - Original_word = English word form (e.g., "going")
-        - EN_definition = English definition
-        - DE_gloss = German translation (e.g., "gehen")
-        - Context_HTML = Context sentence with <b>word</b>
-    
-    For DE words (anki_de_de.tsv):
-        - DE_lemma = German lemma (e.g., "geißeln")
-        - Original_word = German word form (e.g., "geißelten")
-        - DE_definition = German definition
-        - Context_HTML = Context sentence with <b>word</b>
-    
-    Args:
-        tsv_path: Path to TSV file
-        card_type: 'en_de', 'de_en', or 'de_de'
-    
-    Returns:
-        List of rows, each row is a list of field values in APKG field order
-    """
-    rows = []
-    with open(tsv_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f, delimiter='\t')
-        
-        for row_dict in reader:
-            # Map TSV columns to APKG fields based on card type
-            if card_type == 'en_de':
-                # EN→DE cards: English word with German translation
-                # APKG fields: EN_lemma, EN_definition, DE_gloss, Context_HTML, Book, Notes
-                row = [
-                    row_dict.get('EN_lemma', ''),        # EN_lemma
-                    row_dict.get('EN_definition', ''),   # EN_definition
-                    row_dict.get('DE_gloss', ''),        # DE_gloss
-                    row_dict.get('Context_HTML', ''),    # Context_HTML
-                    row_dict.get('Book', ''),            # Book
-                    row_dict.get('Notes', '')            # Notes
-                ]
-            elif card_type == 'de_en':
-                # DE→EN cards: REVERSE of EN→DE (German translation → English word)
-                # WICHTIG: Context_HTML muss zu Cloze konvertiert werden ({{c1::word}} statt <b>word</b>)
-                # APKG fields: DE_gloss, EN_lemma, EN_definition, Context_HTML, Book, Notes
-                context_html = row_dict.get('Context_HTML', '')
-                # Konvertiere <b>word</b> zu {{c1::word}} für Cloze-Funktionalität
-                context_cloze = convert_bold_to_cloze(context_html)
-                
-                row = [
-                    row_dict.get('DE_gloss', ''),        # DE_gloss (German translation = front)
-                    row_dict.get('EN_lemma', ''),        # EN_lemma (English word = back)
-                    row_dict.get('EN_definition', ''),   # EN_definition
-                    context_cloze,                       # Context_HTML (mit Cloze)
-                    row_dict.get('Book', ''),            # Book
-                    row_dict.get('Notes', '')            # Notes
-                ]
-            elif card_type == 'de_de':
-                # DE→DE cards: German word with German definition
-                # APKG fields: DE_lemma, DE_definition, Context_HTML, Book, Notes
-                row = [
-                    row_dict.get('DE_lemma', ''),        # DE_lemma
-                    row_dict.get('DE_definition', ''),   # DE_definition
-                    row_dict.get('Context_HTML', ''),    # Context_HTML
-                    row_dict.get('Book', ''),            # Book
-                    row_dict.get('Notes', '')            # Notes
-                ]
-            else:
-                # Invalid card_type
-                continue
-            
-            rows.append(row)
-    
-    return rows
+    if not html:
+        return ''
+
+    if '{{c1::' not in html:
+        return html
+
+    boldified = html.replace('{{c1::', '<b>', 1)
+    return boldified.replace('}}', '</b>', 1)
 
 
-def convert_tsv_to_apkg(tsv_path: Path, output_path: Path, card_type: str) -> bool:
-    """
-    Converts a TSV file to an APKG package
-    
-    Args:
-        tsv_path: Path to input TSV file
-        output_path: Path to output APKG file
-        card_type: 'en_de', 'de_en', or 'de_de'
-    
-    Returns:
-        True if successful, False otherwise
-    """
-    
+def read_tsv_file(tsv_path: Path, deck_type: str, native_language: str,
+          target_language: str) -> List[List[str]]:
+  """Map TSV rows to the field order expected by the Anki models."""
+
+  rows: List[List[str]] = []
+
+  native_language = native_language.lower()
+  target_language = target_language.lower()
+
+  native_lemma_key = build_field_key(native_language, 'lemma')
+  native_definition_key = build_field_key(native_language, 'definition')
+  native_gloss_key = build_field_key(native_language, 'gloss')
+  target_lemma_key = build_field_key(target_language, 'lemma')
+  target_definition_key = build_field_key(target_language, 'definition')
+
+  with open(tsv_path, 'r', encoding='utf-8') as tsv_file:
+    reader = csv.DictReader(tsv_file, delimiter='\t')
+
+    for row_dict in reader:
+      context_html = row_dict.get('Context_HTML') or ''
+
+      if deck_type == 'foreign_native':
+        prepared_context = convert_cloze_to_bold(context_html)
+        row = [
+          row_dict.get(target_lemma_key, '') or '',
+          row_dict.get(target_definition_key, '') or '',
+          row_dict.get(native_gloss_key, '') or '',
+          prepared_context,
+          row_dict.get('Book', '') or '',
+          row_dict.get('Notes', '') or '',
+        ]
+
+      elif deck_type == 'native_foreign':
+        prepared_context = convert_bold_to_cloze(context_html)
+        row = [
+          row_dict.get(native_gloss_key, '') or '',
+          row_dict.get(target_lemma_key, '') or '',
+          row_dict.get(target_definition_key, '') or '',
+          prepared_context,
+          row_dict.get('Book', '') or '',
+          row_dict.get('Notes', '') or '',
+        ]
+
+      elif deck_type == 'native_native':
+        prepared_context = convert_cloze_to_bold(context_html)
+        row = [
+          row_dict.get(native_lemma_key, '') or '',
+          row_dict.get(native_definition_key, '') or '',
+          prepared_context,
+          row_dict.get('Book', '') or '',
+          row_dict.get('Notes', '') or '',
+        ]
+
+      else:
+        continue
+
+      rows.append(row)
+
+  return rows
+
+
+def convert_tsv_to_apkg(tsv_path: Path, output_path: Path, deck_type: str,
+                        native_language: str, target_language: str) -> bool:
+    """Convert a TSV export into an APKG deck for the requested card orientation."""
+
     if not tsv_path.exists():
         print(f"❌ TSV-Datei nicht gefunden: {tsv_path}")
         return False
-    
-    # Determine model and deck name based on card type
-    if card_type == 'en_de':
-        model = create_en_de_model()
-        deck_name = 'Kindle::EN→DE'
-    elif card_type == 'de_en':
-        model = create_de_en_model()
-        deck_name = 'Kindle::DE→EN'
-    elif card_type == 'de_de':
-        model = create_de_de_model()
-        deck_name = 'Kindle::DE→DE'
-    else:
-        print(f"❌ Unbekannter Kartentyp: {card_type}")
+
+    native_language = native_language.lower()
+    target_language = target_language.lower()
+
+    try:
+        model = create_model(deck_type, native_language, target_language)
+    except ValueError as error:
+        print(f"❌ {error}")
         return False
-    
-    # Read TSV with correct field mapping
-    rows = read_tsv_file(tsv_path, card_type)
-    
-    if len(rows) == 0:
+
+    if deck_type == 'foreign_native':
+        deck_name = f"Kindle::{target_language.upper()}→{native_language.upper()}"
+    elif deck_type == 'native_foreign':
+        deck_name = f"Kindle::{native_language.upper()}→{target_language.upper()}"
+    elif deck_type == 'native_native':
+        deck_name = f"Kindle::{native_language.upper()}→{native_language.upper()}"
+    else:
+        print(f"❌ Unbekannter Kartentyp: {deck_type}")
+        return False
+
+    rows = read_tsv_file(tsv_path, deck_type, native_language, target_language)
+
+    if not rows:
         print(f"⚠️  TSV-Datei ist leer: {tsv_path}")
         return False
-    
-    # Create deck
+
     deck_id = random.randrange(1 << 30, 1 << 31)
     deck = genanki.Deck(deck_id, deck_name)
-    
-    # Add notes to deck with custom GUID based on lemma + card_type
+
     for row in rows:
-        # Ensure all fields are strings and handle empty fields
         fields = [str(field) if field else '' for field in row]
-        
-        # Extract lemma (first field) for GUID generation
         lemma = fields[0]
-        
-        # Generate GUID from lemma + card_type (ensures EN→DE and DE→EN have different GUIDs)
-        guid = generate_guid_from_lemma(lemma, model.model_id, card_type)
-        
+        guid = generate_guid_from_lemma(lemma, model.model_id, deck_type)
+
         note = genanki.Note(
             model=model,
             fields=fields,
-            guid=guid  # Custom GUID: Updates existing cards on re-import
+            guid=guid,
         )
         deck.add_note(note)
-    
-    # Create package and write to file
+
     package = genanki.Package(deck)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     package.write_to_file(str(output_path))
-    
+
     print(f"✅ APKG erstellt: {output_path} ({len(rows)} Karten)")
     return True
 
 
-def convert_all_tsv_to_apkg(tsv_dir: Path, apkg_dir: Path) -> Dict[str, bool]:
-    """
-    Converts all TSV files in a directory to APKG packages
-    
-    Strategy:
-    - anki_en_de.tsv: Create TWO decks (EN→DE and reverse DE→EN) from same data
-    - anki_de_de.tsv: Create one deck (DE→DE) for German vocabulary
-    - anki_de_en.tsv: SKIP (not needed, handled by reverse of anki_en_de.tsv)
-    
-    Args:
-        tsv_dir: Directory containing TSV files
-        apkg_dir: Directory where APKG files will be saved
-    
-    Returns:
-        Dictionary with conversion results {filename: success}
-    """
-    
-    results = {}
-    
-    # 1. Convert anki_en_de.tsv → EN→DE deck
-    tsv_path = tsv_dir / 'anki_en_de.tsv'
+def convert_all_tsv_to_apkg(tsv_dir: Path, apkg_dir: Path,
+                            native_language: Optional[str] = None,
+                            target_language: Optional[str] = None) -> Dict[str, bool]:
+    """Convert all known TSV exports for the configured language pair."""
+
+    if native_language is None or target_language is None:
+        configured_native, configured_target = validate_language_configuration()
+        native_language = native_language or configured_native
+        target_language = target_language or configured_target
+
+    native_language = native_language.lower()
+    target_language = target_language.lower()
+
+    apkg_dir.mkdir(parents=True, exist_ok=True)
+
+    results: Dict[str, bool] = {}
+
+    pair_foreign_native = format_language_pair(target_language, native_language)
+    pair_native_foreign = format_language_pair(native_language, target_language)
+    pair_native_native = format_language_pair(native_language, native_language)
+
+    # Foreign → Native
+    tsv_path = tsv_dir / f"anki_{pair_foreign_native}.tsv"
     if tsv_path.exists():
-        apkg_path = apkg_dir / 'anki_en_de.apkg'
-        success = convert_tsv_to_apkg(tsv_path, apkg_path, 'en_de')
-        results['anki_en_de.tsv → anki_en_de.apkg'] = success
+        apkg_path = apkg_dir / f"anki_{pair_foreign_native}.apkg"
+        success = convert_tsv_to_apkg(
+            tsv_path,
+            apkg_path,
+            'foreign_native',
+            native_language,
+            target_language,
+        )
+        results[f"anki_{pair_foreign_native}.tsv → anki_{pair_foreign_native}.apkg"] = success
     else:
-        print(f"⏭️  Übersprungen (nicht gefunden): anki_en_de.tsv")
-        results['anki_en_de.tsv'] = False
-    
-    # 2. Convert anki_en_de.tsv → DE→EN deck (REVERSE!)
+        print(f"⏭️  Übersprungen (nicht gefunden): anki_{pair_foreign_native}.tsv")
+        results[f"anki_{pair_foreign_native}.tsv"] = False
+
+    # Native → Foreign
+    tsv_path = tsv_dir / f"anki_{pair_native_foreign}.tsv"
     if tsv_path.exists():
-        apkg_path = apkg_dir / 'anki_de_en.apkg'
-        success = convert_tsv_to_apkg(tsv_path, apkg_path, 'de_en')
-        results['anki_en_de.tsv → anki_de_en.apkg (reverse)'] = success
+        apkg_path = apkg_dir / f"anki_{pair_native_foreign}.apkg"
+        success = convert_tsv_to_apkg(
+            tsv_path,
+            apkg_path,
+            'native_foreign',
+            native_language,
+            target_language,
+        )
+        results[f"anki_{pair_native_foreign}.tsv → anki_{pair_native_foreign}.apkg"] = success
     else:
-        results['anki_de_en.apkg'] = False
-    
-    # 3. Convert anki_de_de.tsv → DE→DE deck
-    tsv_path = tsv_dir / 'anki_de_de.tsv'
+        print(f"⏭️  Übersprungen (nicht gefunden): anki_{pair_native_foreign}.tsv")
+        results[f"anki_{pair_native_foreign}.tsv"] = False
+
+    # Native → Native (monolingual)
+    tsv_path = tsv_dir / f"anki_{pair_native_native}.tsv"
     if tsv_path.exists():
-        apkg_path = apkg_dir / 'anki_de_de.apkg'
-        success = convert_tsv_to_apkg(tsv_path, apkg_path, 'de_de')
-        results['anki_de_de.tsv → anki_de_de.apkg'] = success
+        apkg_path = apkg_dir / f"anki_{pair_native_native}.apkg"
+        success = convert_tsv_to_apkg(
+            tsv_path,
+            apkg_path,
+            'native_native',
+            native_language,
+            native_language,
+        )
+        results[f"anki_{pair_native_native}.tsv → anki_{pair_native_native}.apkg"] = success
     else:
-        print(f"⏭️  Übersprungen (nicht gefunden): anki_de_de.tsv")
-        results['anki_de_de.tsv'] = False
-    
+        print(f"⏭️  Übersprungen (nicht gefunden): anki_{pair_native_native}.tsv")
+        results[f"anki_{pair_native_native}.tsv"] = False
+
     return results
 
 

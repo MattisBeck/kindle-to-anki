@@ -7,6 +7,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from .config import build_field_key
+
 
 def log_error(message: str, error_file: str = 'anki_cards/errors.log', verbose: bool = False):
     """
@@ -121,7 +123,7 @@ def format_time(seconds: float) -> str:
     return f"{hours}h {remaining_minutes}m"
 
 
-def print_stats(en_cards: List[Dict], de_cards: List[Dict], cache_stats: Dict, 
+def print_stats(deck_counts: Dict[str, int], cache_stats: Dict,
                processing_time: float = 0, verbose: bool = True):
     """
     Print processing statistics
@@ -141,24 +143,26 @@ def print_stats(en_cards: List[Dict], de_cards: List[Dict], cache_stats: Dict,
     print("="*60)
     
     # Card counts
-    print(f"\n📚 Cards Created:")
-    print(f"  • English (EN→DE): {len(en_cards)} cards")
-    print(f"  • German (DE→EN):  {len(de_cards)} cards")
-    print(f"  • German (DE→DE):  {len(de_cards)} cards")
-    print(f"  • TOTAL:           {len(en_cards) + len(de_cards)} unique words")
+    print("\n📚 Cards Created:")
+    total_cards = 0
+    for label, count in deck_counts.items():
+        print(f"  • {label}: {count} cards")
+        total_cards += count
+    print(f"  • TOTAL:           {total_cards} cards")
     
     # Cache stats
     print(f"\n💾 Cache Statistics:")
     print(f"  • Total cached:    {cache_stats.get('total', 0)} words")
-    print(f"  • English:         {cache_stats.get('en', 0)} words")
-    print(f"  • German:          {cache_stats.get('de', 0)} words")
+    for lang, count in cache_stats.items():
+        if lang == 'total':
+            continue
+        print(f"  • {lang.upper()}:        {count} words")
     
     # Performance
     if processing_time > 0:
         print(f"\n⏱️  Performance:")
         print(f"  • Total time:      {format_time(processing_time)}")
         
-        total_cards = len(en_cards) + len(de_cards)
         if total_cards > 0:
             avg_time = processing_time / total_cards
             print(f"  • Avg per card:    {avg_time:.2f}s")
@@ -178,15 +182,21 @@ def count_api_calls(cards: List[Dict], cache: Dict, language: str) -> int:
     Returns:
         Number of API calls needed
     """
-    cache_key = 'en_words' if language == 'en' else 'de_words'
-    cached_lemmas = set(cache.get(cache_key, {}).keys())
-    
+    language = language.lower()
+    bucket = cache.get('languages', {}).get(language, {})
+    lemma_key = build_field_key(language, 'lemma')
+    cached_lemmas = {
+        card.get(lemma_key, '').lower()
+        for card in bucket.values()
+        if card.get(lemma_key)
+    }
+
     new_cards = 0
     for card in cards:
-        lemma = card.get('Lemma', '').lower()
+        lemma = card.get(lemma_key, '').lower()
         if lemma and lemma not in cached_lemmas:
             new_cards += 1
-    
+
     return new_cards
 
 

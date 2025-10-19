@@ -1,7 +1,9 @@
 """Export utilities for creating TSV and APKG files."""
 
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, List
+
+from .config import build_field_key, format_language_pair
 
 
 def _ensure_bold_context(card: Dict) -> str:
@@ -34,7 +36,9 @@ def _ensure_cloze_context(card: Dict) -> str:
     return context_html
 
 
-def create_tsv_file(cards: List[Dict], output_file: str, card_type: str, verbose: bool = False):
+def create_tsv_file(cards: List[Dict], output_file: str, card_type: str,
+                    native_language: str, target_language: str,
+                    verbose: bool = False):
     """Create a TSV file ready for Anki import."""
 
     if not cards:
@@ -45,47 +49,54 @@ def create_tsv_file(cards: List[Dict], output_file: str, card_type: str, verbose
     output_path = Path(output_file)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if card_type == 'de_de':
-        header = "DE_lemma\tOriginal_word\tDE_definition\tContext_HTML\tBook\tNotes\n"
-    elif card_type == 'en_de':
-        header = "EN_lemma\tOriginal_word\tEN_definition\tDE_gloss\tContext_HTML\tBook\tNotes\n"
-    else:  # de_en
-        header = "DE_gloss\tEN_lemma\tOriginal_word\tEN_definition\tContext_HTML\tBook\tNotes\n"
+    native_language = native_language.lower()
+    target_language = target_language.lower()
+
+    native_lemma_key = build_field_key(native_language, 'lemma')
+    native_definition_key = build_field_key(native_language, 'definition')
+    native_gloss_key = build_field_key(native_language, 'gloss')
+    target_lemma_key = build_field_key(target_language, 'lemma')
+    target_definition_key = build_field_key(target_language, 'definition')
+
+    if card_type == 'native_native':
+        header = f"{native_lemma_key}\tOriginal_word\t{native_definition_key}\tContext_HTML\tBook\tNotes\n"
+        context_transform = _ensure_bold_context
+    elif card_type == 'foreign_native':
+        header = f"{target_lemma_key}\tOriginal_word\t{target_definition_key}\t{native_gloss_key}\tContext_HTML\tBook\tNotes\n"
+        context_transform = _ensure_bold_context
+    else:  # native_foreign
+        header = f"{native_gloss_key}\t{target_lemma_key}\tOriginal_word\t{target_definition_key}\tContext_HTML\tBook\tNotes\n"
+        context_transform = _ensure_cloze_context
 
     lines = [header]
 
     for card in cards:
         notes = card.get('Notes', '')
-        
-        # For DE→EN, use cloze; for EN→DE and DE→DE, use bold
-        if card_type == 'de_en':
-            context_html = _ensure_cloze_context(card)
-        else:
-            context_html = _ensure_bold_context(card)
+        context_html = context_transform(card)
 
-        if card_type == 'de_de':
-            line = f"{card.get('DE_lemma', '')}\t"
+        if card_type == 'native_native':
+            line = f"{card.get(native_lemma_key, '')}\t"
             line += f"{card.get('Original_word', '')}\t"
-            line += f"{card.get('DE_definition', '')}\t"
+            line += f"{card.get(native_definition_key, '')}\t"
             line += f"{context_html}\t"
             line += f"{card.get('Book', '')}\t"
             line += f"{notes}\n"
 
-        elif card_type == 'en_de':
-            line = f"{card.get('EN_lemma', '')}\t"
+        elif card_type == 'foreign_native':
+            line = f"{card.get(target_lemma_key, '')}\t"
             line += f"{card.get('Original_word', '')}\t"
-            line += f"{card.get('EN_definition', '')}\t"
-            line += f"{card.get('DE_gloss', '')}\t"
+            line += f"{card.get(target_definition_key, '')}\t"
+            line += f"{card.get(native_gloss_key, '')}\t"
             line += f"{context_html}\t"
             line += f"{card.get('Book', '')}\t"
             line += f"{notes}\n"
 
-        else:  # de_en
-            line = f"{card.get('DE_gloss', '')}\t"
-            line += f"{card.get('EN_lemma', '')}\t"
+        else:  # native_foreign
+            line = f"{card.get(native_gloss_key, '')}\t"
+            line += f"{card.get(target_lemma_key, '')}\t"
             line += f"{card.get('Original_word', '')}\t"
-            line += f"{card.get('EN_definition', '')}\t"
-            line += f"{context_html}\t"  # Already has cloze from _ensure_cloze_context
+            line += f"{card.get(target_definition_key, '')}\t"
+            line += f"{context_html}\t"
             line += f"{card.get('Book', '')}\t"
             line += f"{notes}\n"
 
@@ -102,7 +113,9 @@ def create_tsv_file(cards: List[Dict], output_file: str, card_type: str, verbose
             print(f"  ❌ TSV creation failed: {exc}")
 
 
-def create_all_tsv_files(en_cards: List[Dict], de_cards: List[Dict], verbose: bool = False):
+def create_all_tsv_files(foreign_cards: List[Dict], native_cards: List[Dict],
+                         native_language: str, target_language: str,
+                         verbose: bool = False):
     """
     Create all TSV files (EN→DE, DE→EN, DE→DE)
     
@@ -115,22 +128,50 @@ def create_all_tsv_files(en_cards: List[Dict], de_cards: List[Dict], verbose: bo
     
     tsv_dir = Path(CONFIG['TSV_OUTPUT_DIR'])
     tsv_dir.mkdir(parents=True, exist_ok=True)
-    
-    # EN → DE cards (English word → German translation)
-    if en_cards:
-        output_file = tsv_dir / 'anki_en_de.tsv'
-        create_tsv_file(en_cards, str(output_file), 'en_de', verbose)
-    
-    # DE → EN cards (German translation → English word) - REVERSE of EN→DE!
-    # WICHTIG: Verwendet en_cards, nicht de_cards!
-    if en_cards:
-        output_file = tsv_dir / 'anki_de_en.tsv'
-        create_tsv_file(en_cards, str(output_file), 'de_en', verbose)
-    
-    # DE → DE cards (German word → German definition)
-    if de_cards:
-        output_file = tsv_dir / 'anki_de_de.tsv'
-        create_tsv_file(de_cards, str(output_file), 'de_de', verbose)
+
+    create_foreign_native = CONFIG.get('CREATE_FOREIGN_TO_NATIVE', True)
+    create_native_foreign = CONFIG.get('CREATE_NATIVE_TO_FOREIGN', True)
+    create_native_native = CONFIG.get('CREATE_NATIVE_TO_NATIVE', True)
+
+    pair_foreign_native = format_language_pair(target_language, native_language)
+    pair_native_foreign = format_language_pair(native_language, target_language)
+    pair_native_native = format_language_pair(native_language, native_language)
+
+    # Foreign → Native deck
+    if foreign_cards and create_foreign_native:
+        output_file = tsv_dir / f"anki_{pair_foreign_native}.tsv"
+        create_tsv_file(
+            foreign_cards,
+            str(output_file),
+            'foreign_native',
+            native_language,
+            target_language,
+            verbose,
+        )
+
+    # Native → Foreign deck (reverse cards)
+    if foreign_cards and create_native_foreign:
+        output_file = tsv_dir / f"anki_{pair_native_foreign}.tsv"
+        create_tsv_file(
+            foreign_cards,
+            str(output_file),
+            'native_foreign',
+            native_language,
+            target_language,
+            verbose,
+        )
+
+    # Native → Native deck (monolingual)
+    if native_cards and create_native_native:
+        output_file = tsv_dir / f"anki_{pair_native_native}.tsv"
+        create_tsv_file(
+            native_cards,
+            str(output_file),
+            'native_native',
+            native_language,
+            target_language,
+            verbose,
+        )
 
 
 def export_to_apkg(tsv_dir: str, apkg_dir: str, verbose: bool = False):
@@ -171,13 +212,13 @@ def export_to_apkg(tsv_dir: str, apkg_dir: str, verbose: bool = False):
             print(f"❌ APKG export failed: {e}")
 
 
-def remove_duplicates(cards: List[Dict], language: str = 'en') -> List[Dict]:
+def remove_duplicates(cards: List[Dict], language: str) -> List[Dict]:
     """
     Remove duplicate cards based on lemma field
     
     Args:
-        cards: List of card dictionaries
-        language: 'en' or 'de' to determine which lemma field to use
+    cards: List of card dictionaries
+    language: ISO code used for the lemma field
         
     Returns:
         Deduplicated list of cards
@@ -186,7 +227,7 @@ def remove_duplicates(cards: List[Dict], language: str = 'en') -> List[Dict]:
     unique_cards = []
     
     # Determine lemma key based on language
-    lemma_key = 'EN_lemma' if language == 'en' else 'DE_lemma'
+    lemma_key = build_field_key(language.lower(), 'lemma')
     
     for card in cards:
         value = card.get(lemma_key, '').lower()
@@ -197,23 +238,33 @@ def remove_duplicates(cards: List[Dict], language: str = 'en') -> List[Dict]:
     return unique_cards
 
 
-def validate_card(card: Dict, card_type: str) -> bool:
+def validate_card(card: Dict, card_type: str,
+                  native_language: str, target_language: str) -> bool:
     """
     Validate card has required fields
     
     Args:
-        card: Card dictionary
-        card_type: 'en_de', 'de_en', or 'de_de'
+    card: Card dictionary
+    card_type: 'foreign_native', 'native_foreign', or 'native_native'
         
     Returns:
         True if card is valid
     """
-    if card_type == 'de_de':
-        required_fields = ['DE_lemma', 'Original_word', 'DE_definition', 'Context_HTML', 'Book']
-    elif card_type == 'en_de':
-        required_fields = ['EN_lemma', 'Original_word', 'EN_definition', 'DE_gloss', 'Context_HTML', 'Book']
-    else:  # de_en
-        required_fields = ['DE_gloss', 'EN_lemma', 'Original_word', 'EN_definition', 'Context_HTML', 'Book']
+    native_language = native_language.lower()
+    target_language = target_language.lower()
+
+    native_lemma_key = build_field_key(native_language, 'lemma')
+    native_definition_key = build_field_key(native_language, 'definition')
+    native_gloss_key = build_field_key(native_language, 'gloss')
+    target_lemma_key = build_field_key(target_language, 'lemma')
+    target_definition_key = build_field_key(target_language, 'definition')
+
+    if card_type == 'native_native':
+        required_fields = [native_lemma_key, 'Original_word', native_definition_key, 'Context_HTML', 'Book']
+    elif card_type == 'foreign_native':
+        required_fields = [target_lemma_key, 'Original_word', target_definition_key, native_gloss_key, 'Context_HTML', 'Book']
+    else:  # native_foreign
+        required_fields = [native_gloss_key, target_lemma_key, 'Original_word', target_definition_key, 'Context_HTML', 'Book']
     
     # Check all required fields exist and are non-empty
     for field in required_fields:
@@ -223,19 +274,24 @@ def validate_card(card: Dict, card_type: str) -> bool:
     return True
 
 
-def filter_valid_cards(cards: List[Dict], card_type: str, verbose: bool = False) -> List[Dict]:
+def filter_valid_cards(cards: List[Dict], card_type: str,
+                       native_language: str, target_language: str,
+                       verbose: bool = False) -> List[Dict]:
     """
     Filter out invalid cards
     
     Args:
-        cards: List of card dictionaries
-        card_type: 'en_de', 'de_en', or 'de_de'
+    cards: List of card dictionaries
+    card_type: 'foreign_native', 'native_foreign', or 'native_native'
         verbose: Enable verbose output
         
     Returns:
         List of valid cards
     """
-    valid_cards = [card for card in cards if validate_card(card, card_type)]
+    valid_cards = [
+        card for card in cards
+    if validate_card(card, card_type, native_language, target_language)
+    ]
     
     if verbose and len(valid_cards) < len(cards):
         invalid_count = len(cards) - len(valid_cards)

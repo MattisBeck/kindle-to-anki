@@ -6,7 +6,9 @@ import re
 import json
 import time
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
+
+from .config import CONFIG, build_field_key, get_language_meta
 
 
 def make_context_html(usage: str, original_word: str, use_cloze: bool = False) -> str:
@@ -67,156 +69,95 @@ def setup_gemini_api(api_key: str, verbose: bool = False):
         return None
 
 
-def create_prompt_for_batch(words_batch: List[Dict], language: str, 
+def create_prompt_for_batch(words_batch: List[Dict], word_language: str,
+                            native_language: str, target_language: str,
                             context_sentences: bool = True) -> str:
-    """
-    Create optimized Gemini prompt for batch translation
-    
-    Args:
-        words_batch: List of word dictionaries with 'word', 'usage', 'book', 'lemma'
-        language: 'en' or 'de'
-        context_sentences: Include usage examples
-        
-    Returns:
-        Formatted prompt string (in German - optimized!)
-    """
-    prompt_intro = """Du bist ein Experte für Sprachenlernen und erstellst hochwertige Anki-Karteikarten.
+    """Create an optimized (German) Gemini prompt for multilingual batches."""
 
-WICHTIGE REGELN:
-1. Verben IMMER im Infinitiv angeben
-2. Kontextsatz: Die Zielvokabel im Satz mit <b>...</b> fett markieren
+    native_meta = get_language_meta(native_language)
+    target_meta = get_language_meta(target_language)
+    word_meta = get_language_meta(word_language)
 
-"""
-    
-    if language == 'en':
-        prompt_intro += """
-AUFGABE: Gib für jede Vokabel NUR zurück:
-- EN_definition: LIES DEN KONTEXT! Gib BEIDE Bedeutungen an:
-    1. Die Bedeutung die IM KONTEXT verwendet wird (ZUERST!)
-    2. Falls es eine andere häufige Bedeutung gibt, auch diese (mit "also:")
-    Beispiel: "breeding" im Kontext Person = "upbringing, good manners (also: animal reproduction)"
-- DE_gloss: Deutsche Übersetzung die ZUM KONTEXT passt
-    REGELN für DE_gloss:
-    • Verben im INFINITIV (z.B. "wiegen" NICHT "wiegte")
-    • Normale deutsche Rechtschreibung (Substantive beginnen mit Großbuchstaben)
-    • Mehrere Bedeutungen mit Komma trennen (z.B. "rufen, anfunken, kontaktieren")
-    • Breite Übersetzung bevorzugen (z.B. "Haufen" NICHT nur "Müllhaufen")
-    • Bei Fachbegriffen korrekte deutsche Begriffe (z.B. "Kommandoturm" für "conning tower")
-- Notes: Nur wenn WIRKLICH hilfreich! "" wenn nichts zutrifft.
-    Erlaubt: 
-    • Register (umgangsspr./formell)
-    • Variante (BE/AE)
-    • Falsche Freunde
-    • Formen ZEIGEN (z.B. "go-went-gone" NICHT "irregular")
-    • Wendungen
-    • Tonalität (z.B. "negative connotation", "formal/literary", "admiring tone")
-    • Fremdwort: ERKLÄRE das deutsche Fremdwort! (z.B. "Fremdwort 'heuristisch' = durch Probieren lernend")
-      → Bei seltenen Latein/Griechisch-Wörtern (obeisance, supercilious, etc.) IMMER Fremdwort-Note!
+    lemma_field = build_field_key(word_language, 'lemma')
+    definition_field = build_field_key(word_language, 'definition')
+    gloss_field = build_field_key(native_language, 'gloss')
 
-⚠️ KONTEXT LESEN! Bedeutung muss zum Satz passen! Tonalität bei wertenden Wörtern!
-⚠️ WICHTIG: Original_word, EN_lemma, Context_HTML und Book NICHT ausgeben - werden automatisch ergänzt!
+    prompt_lines = [
+        "Du bist ein Experte für Sprachenlernen und erstellst hochwertige Anki-Karteikarten.",
+        "",
+        "SPRACHEN:",
+        f"- Native Language (Definitionen & Notes): {native_meta['german_name']} ({native_language.upper()})",
+        f"- Zielvokabel-Sprache: {target_meta['german_name']} ({target_language.upper()})",
+        "",
+        "WICHTIGE REGELN:",
+        "1. Verben IMMER im Infinitiv angeben",
+        "2. Kontextsatz: Die Zielvokabel im Satz mit <b>...</b> fett markieren",
+        ""
+    ]
 
-"""
-    else:  # de
-        prompt_intro += """
-AUFGABE: Gib für jede Vokabel NUR zurück:
-- DE_definition: LIES DEN KONTEXT! Gib BEIDE Bedeutungen an (einfache Worte):
-    1. Die Bedeutung die IM KONTEXT verwendet wird (ZUERST!)
-    2. Falls es eine andere häufige Bedeutung gibt, auch diese (mit "auch:")
-- Notes: Nur wenn WIRKLICH hilfreich! "" wenn nichts zutrifft.
-    Erlaubt: 
-    • Register (umgangsspr./formell/gehoben)
-    • Variante (regional/Jugend)
-    • Falsche Freunde
-    • Fremdwort: ERKLÄRE das Fremdwort! (z.B. "Latinismus, bedeutet: ...")
-    • Wendungen
-    • Tonalität (z.B. "abwertend", "gehoben", "bewundernd")
+    if word_language == target_language:
+        prompt_lines.extend([
+            "AUFGABE: Gib für jede Vokabel NUR zurück:",
+            f"- {definition_field}: {target_meta['german_name']}e Definition (erst die im Kontext verwendete Bedeutung, danach "
+            "optionale weitere häufige Bedeutung mit 'also:').",
+            f"- {gloss_field}: {native_meta['german_name']}e Übersetzung, die zum Kontext passt (Verben im Infinitiv, Nomen groß, mehrere Bedeutungen mit Komma).",
+            f"- Notes: Nur wenn WIRKLICH hilfreich. Schreibe die Notes in {native_meta['german_name']} (Register, Varianten, Falsche Freunde, Formen, Tonalität, Fremdwörter erklären).",
+            "",
+            "⚠️ KONTEXT LESEN! Bedeutung muss zum Satz passen, Tonalität berücksichtigen.",
+            f"⚠️ WICHTIG: Original_word, {lemma_field}, Context_HTML und Book NICHT ausgeben – das übernimmt der Code automatisch.",
+            ""
+        ])
+    else:
+        prompt_lines.extend([
+            "AUFGABE: Gib für jede Vokabel NUR zurück:",
+            f"- {definition_field}: {native_meta['german_name']}e Definition in einfachen Worten (erst Kontext-Bedeutung, danach optionale häufige Bedeutung mit 'auch:').",
+            f"- Notes: Nur wenn hilfreich. Schreibe Notes in {native_meta['german_name']} (Register, Varianten, Falsche Freunde, Fremdwörter erklären, Tonalität).",
+            "",
+            "⚠️ KONTEXT LESEN! Bedeutung muss zum Satz passen, Tonalität berücksichtigen.",
+            f"⚠️ WICHTIG: Original_word, {lemma_field}, Context_HTML und Book NICHT ausgeben – das übernimmt der Code automatisch.",
+            ""
+        ])
 
-⚠️ KONTEXT LESEN! Bedeutung muss zum Satz passen! Tonalität bei wertenden Wörtern!
-⚠️ WICHTIG: Original_word, DE_lemma, Context_HTML und Book NICHT ausgeben - werden automatisch ergänzt!
-"""
-    
-    # Vokabeln hinzufügen mit Lemmatisierung
-    prompt_words = "VOKABELN:\n\n"
+    # Add Vocabs with lemmatization
+    prompt_words = ["VOKABELN:\n"]
     for i, word_data in enumerate(words_batch, 1):
         word = word_data['word']
         lemma = word_data.get('lemma', word.lower())
         usage = word_data.get('usage', '')
         book = word_data.get('book', '')
-        
-        prompt_words += f"{i}. Wort: {word}\n"
-        prompt_words += f"   Lemma: {lemma}\n"
-        
-        if usage:
-            prompt_words += f"   Kontext: {usage}\n"
-        
+
+        prompt_words.append(f"{i}. Wort: {word}\n")
+        prompt_words.append(f"   Lemma: {lemma}\n")
+
+        if context_sentences and usage:
+            prompt_words.append(f"   Kontext: {usage}\n")
+
         if book and book != 'Unknown':
-            prompt_words += f"   Buch: {book}\n"
-        
-        prompt_words += "\n"
-    
-    prompt_output = """
-AUSGABEFORMAT: Gib ausschließlich ein gültiges JSON-Array zurück, ohne zusätzliche Erklärungen oder Markdown-Formatierung.
-Jedes Objekt repräsentiert NUR die generierten Felder für eine Vokabel (in dieser Reihenfolge).
+            prompt_words.append(f"   Buch: {book}\n")
 
-"""
-    
-    if language == 'en':
-        prompt_output += """Beispiel (nur die 3 generierten Felder):
-[
-  {
-    "EN_definition": "upbringing, good manners, and refinement (also: the mating and production of offspring by animals)",
-    "DE_gloss": "vornehme Erziehung, gute Manieren",
-    "Notes": ""
-  },
-  {
-    "EN_definition": "to collect someone or something (also: to lift, to learn, to improve)",
-    "DE_gloss": "abholen, aufsammeln",
-    "Notes": "phrasal verb"
-  },
-  {
-    "EN_definition": "to die",
-    "DE_gloss": "den Löffel abgeben, sterben",
-    "Notes": "idiomatic expression; informal"
-  },
-  {
-    "EN_definition": "the official residence of the British Prime Minister (also: metonym for the UK government)",
-    "DE_gloss": "Downing Street",
-    "Notes": "proper noun; metonym for UK government"
-  },
-  {
-    "EN_definition": "behaving as though one is superior to others",
-    "DE_gloss": "überheblich, hochmütig",
-    "Notes": "Fremdwort (lat. 'supercilium' = Augenbraue); formal/literary; negative connotation"
-  }
-]
-"""
+        prompt_words.append("\n")
+
+    prompt_output = [
+        "AUSGABEFORMAT: Gib ausschließlich ein gültiges JSON-Array zurück – ohne Erklärungen oder Markdown.",
+        "Jedes Objekt umfasst NUR die generierten Felder in exakt dieser Schreibweise.",
+        "",
+        "Beispiel:" 
+    ]
+
+    if word_language == target_language:
+        prompt_output.append(
+            f"\n[\n  {{\n    \"{definition_field}\": \"Definition Beispiel\",\n    \"{gloss_field}\": \"Übersetzung Beispiel\",\n    \"Notes\": \"optional in {native_meta['german_name']}\"\n  }},\n  {{\n    \"{definition_field}\": \"weitere Bedeutung (also: ... )\",\n    \"{gloss_field}\": \"alternative Übersetzung\",\n    \"Notes\": \"\"\n  }}\n]\n"
+        )
     else:
-        prompt_output += """Beispiel (nur die 2 generierten Felder):
-[
-  {
-    "DE_definition": "jemanden heftig kritisieren oder anprangern (auch: mit einer Geißel schlagen)",
-    "Notes": "gehoben/literarisch"
-  },
-  {
-    "DE_definition": "sterben",
-    "Notes": "Redewendung; nicht wörtlich; umgangssprachlich"
-  },
-  {
-    "DE_definition": "jemanden durch ständiges Nerven erschöpfen oder irritieren",
-    "Notes": "umgangssprachlich; Partizip II von 'abnerven'"
-  },
-  {
-    "DE_definition": "Amtssitz des US-Präsidenten (auch: Synonym für die US-Regierung)",
-    "Notes": "Eigenname; Metonym für US-Regierung"
-  }
-]
-"""
-    
-    return prompt_intro + prompt_words + prompt_output
+        prompt_output.append(
+            f"\n[\n  {{\n    \"{definition_field}\": \"Definition Beispiel\",\n    \"Notes\": \"Register-Hinweis in {native_meta['german_name']}\"\n  }},\n  {{\n    \"{definition_field}\": \"weitere Bedeutung (auch: ... )\",\n    \"Notes\": \"\"\n  }}\n]\n"
+        )
+
+    return "\n".join(prompt_lines) + "".join(prompt_words) + "\n".join(prompt_output)
 
 
-def process_batch_with_gemini(words_batch: List[Dict], language: str, genai, 
+def process_batch_with_gemini(words_batch: List[Dict], language: str,
+                              native_language: str, target_language: str, genai,
                               verbose: bool = False, max_retries: int = 2,
                               batch_num: int = 0) -> List[Dict]:
     """
@@ -236,9 +177,13 @@ def process_batch_with_gemini(words_batch: List[Dict], language: str, genai,
     if not genai:
         return []
     
-    from .config import CONFIG
-    
-    prompt = create_prompt_for_batch(words_batch, language, context_sentences=True)
+    prompt = create_prompt_for_batch(
+        words_batch,
+        word_language=language,
+        native_language=native_language,
+        target_language=target_language,
+        context_sentences=True,
+    )
     
     # Save raw input (prompt) if configured
     if CONFIG.get('SAVE_RAW_INPUTS'):
@@ -301,6 +246,9 @@ def process_batch_with_gemini(words_batch: List[Dict], language: str, genai,
                 
                 # Match responses with input words
                 results = []
+                lemma_key = build_field_key(language, 'lemma')
+                definition_key = build_field_key(language, 'definition')
+                gloss_key = build_field_key(native_language, 'gloss')
                 for i, word_data in enumerate(words_batch):
                     if i < len(parsed_data):
                         gemini_result = parsed_data[i]
@@ -313,29 +261,24 @@ def process_batch_with_gemini(words_batch: List[Dict], language: str, genai,
                         context_html = make_context_html(usage_plain, word_data['word'], use_cloze=False)
                         
                         # Extract translation/definition
-                        translation = gemini_result.get('DE_gloss', '') if language == 'en' else ''
-                        definition = gemini_result.get('EN_definition', '') if language == 'en' else gemini_result.get('DE_definition', '')
+                        definition = gemini_result.get(definition_key, '') or ''
+                        notes_value = gemini_result.get('Notes', '') or ''
+                        translation = ''
+                        if language == target_language:
+                            translation = gemini_result.get(gloss_key, '') or ''
                         
                         # Build card with language-specific schema in correct order
-                        if language == 'en':
-                            card = {
-                                'EN_lemma': word_data.get('lemma', word_data['word'].lower()),
-                                'Original_word': word_data['word'],
-                                'EN_definition': definition,
-                                'DE_gloss': translation,
-                                'Context_HTML': context_html,
-                                'Notes': gemini_result.get('Notes', ''),
-                                'Book': word_data.get('book', 'Unknown')
-                            }
-                        else:  # de
-                            card = {
-                                'DE_lemma': word_data.get('lemma', word_data['word'].lower()),
-                                'Original_word': word_data['word'],
-                                'DE_definition': definition,
-                                'Context_HTML': context_html,
-                                'Notes': gemini_result.get('Notes', ''),
-                                'Book': word_data.get('book', 'Unknown')
-                            }
+                        card = {
+                            lemma_key: word_data.get('lemma', word_data['word'].lower()),
+                            'Original_word': word_data['word'],
+                            definition_key: definition,
+                            'Context_HTML': context_html,
+                            'Notes': notes_value,
+                            'Book': word_data.get('book', 'Unknown'),
+                        }
+
+                        if language == target_language:
+                            card[gloss_key] = translation
                         
                         results.append(card)
                     else:

@@ -12,7 +12,7 @@ BOOK_AUTHOR_CACHE = {}
 GEMINI_AUTHOR_CACHE = {}
 
 
-def lemmatize_word(word: str, language: str, nlp_en=None, nlp_de=None) -> str:
+def lemmatize_word(word: str, language: str, nlp_models=None, nlp_en=None, nlp_de=None) -> str:
     """
     Lemmatize a word using spaCy
     
@@ -25,7 +25,15 @@ def lemmatize_word(word: str, language: str, nlp_en=None, nlp_de=None) -> str:
     Returns:
         Lemma in lowercase (except proper nouns stay capitalized)
     """
-    nlp = nlp_en if language == 'en' else nlp_de
+    nlp = None
+
+    if isinstance(nlp_models, dict):
+        nlp = nlp_models.get(language)
+    else:
+        if language == 'en':
+            nlp = nlp_en
+        elif language == 'de':
+            nlp = nlp_de
     
     if not nlp:
         return word.lower()  # Fallback: simple lowercase
@@ -399,21 +407,13 @@ def load_book_titles_from_cache(cache: dict, verbose: bool = False):
     """
     global BOOK_TITLE_CACHE
     
-    # EN words
-    for card in cache.get('en_words', {}).values():
-        book = card.get('Book', '')
-        if book and book != "Unknown":
-            normalized_key = book.lower().strip()
-            if normalized_key not in BOOK_TITLE_CACHE:
-                BOOK_TITLE_CACHE[normalized_key] = book
-    
-    # DE words
-    for card in cache.get('de_words', {}).values():
-        book = card.get('Book', '')
-        if book and book != "Unknown":
-            normalized_key = book.lower().strip()
-            if normalized_key not in BOOK_TITLE_CACHE:
-                BOOK_TITLE_CACHE[normalized_key] = book
+    for language_cards in cache.get('languages', {}).values():
+        for card in language_cards.values():
+            book = card.get('Book', '')
+            if book and book != "Unknown":
+                normalized_key = book.lower().strip()
+                if normalized_key not in BOOK_TITLE_CACHE:
+                    BOOK_TITLE_CACHE[normalized_key] = book
     
     if verbose and BOOK_TITLE_CACHE:
         print(f"  📚 {len(BOOK_TITLE_CACHE)} unique book titles loaded into RAM")

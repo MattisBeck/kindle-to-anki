@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 from typing import Dict, Optional
 
+from .config import build_field_key
+
 
 def load_translated_cache(cache_file: str, verbose: bool = False) -> Dict:
     """
@@ -25,9 +27,9 @@ def load_translated_cache(cache_file: str, verbose: bool = False) -> Dict:
     Returns:
         Cache dictionary
     """
-    cache = {
-        'en_words': {},
-        'de_words': {}
+    cache: Dict = {
+        'version': 2,
+        'languages': {}
     }
     
     if os.path.exists(cache_file):
@@ -37,18 +39,33 @@ def load_translated_cache(cache_file: str, verbose: bool = False) -> Dict:
                 
                 # Validate structure
                 if isinstance(loaded_cache, dict):
-                    cache['en_words'] = loaded_cache.get('en_words', {})
-                    cache['de_words'] = loaded_cache.get('de_words', {})
-                    
-                    en_count = len(cache['en_words'])
-                    de_count = len(cache['de_words'])
-                    total = en_count + de_count
-                    
+                    if 'languages' in loaded_cache:
+                        cache['languages'] = loaded_cache.get('languages', {})
+                        cache['version'] = loaded_cache.get('version', 2)
+                    else:
+                        # Legacy schema migration (en_words/de_words)
+                        migrated_languages = {}
+                        en_words = loaded_cache.get('en_words', {})
+                        de_words = loaded_cache.get('de_words', {})
+                        if en_words:
+                            migrated_languages['en'] = {
+                                f"en:{lemma}": card for lemma, card in en_words.items()
+                            }
+                        if de_words:
+                            migrated_languages['de'] = {
+                                f"de:{lemma}": card for lemma, card in de_words.items()
+                            }
+                        cache['languages'] = migrated_languages
+                        cache['version'] = 2
+                    total = sum(len(words) for words in cache['languages'].values())
                     if verbose:
-                        print(f"  📦 Cache loaded: {total} words (EN: {en_count}, DE: {de_count})")
+                        details = ', '.join(
+                            f"{lang.upper()}: {len(words)}" for lang, words in cache['languages'].items()
+                        ) or "leer"
+                        print(f"  📦 Cache loaded: {total} words ({details})")
                 else:
                     if verbose:
-                        print(f"  ⚠️  Invalid cache format, starting fresh")
+                        print("  ⚠️  Invalid cache format, starting fresh")
         
         except Exception as e:
             if verbose:
@@ -78,20 +95,25 @@ def save_translated_cache(cache: Dict, cache_file: str, verbose: bool = False):
         with open(cache_file, 'w', encoding='utf-8') as f:
             json.dump(cache, f, indent=2, ensure_ascii=False)
         
-        en_count = len(cache.get('en_words', {}))
-        de_count = len(cache.get('de_words', {}))
-        total = en_count + de_count
-        
+        language_counts = {lang: len(entries) for lang, entries in cache.get('languages', {}).items()}
+        total = sum(language_counts.values())
+
         if verbose:
-            print(f"  💾 Cache saved: {total} words (EN: {en_count}, DE: {de_count})")
+            details = ', '.join(f"{lang.upper()}: {count}" for lang, count in language_counts.items()) or "leer"
+            print(f"  💾 Cache saved: {total} words ({details})")
     
     except Exception as e:
         if verbose:
             print(f"  ❌ Cache save error: {e}")
 
 
-def add_to_cache(cards: list, words: list, language: str, cache: Dict, 
-                 verbose: bool = False):
+def _language_bucket(cache: Dict, language: str) -> Dict:
+    languages = cache.setdefault('languages', {})
+    return languages.setdefault(language, {})
+
+
+def add_to_cache(cards: list, words: list, language: str, cache: Dict,
+                 native_language: str, verbose: bool = False):
     """
     Add translated vocabulary cards to cache
     Matches each card with the corresponding word from the batch
@@ -112,8 +134,12 @@ def add_to_cache(cards: list, words: list, language: str, cache: Dict,
         verbose: Enable verbose output
     """
     from .normalization import normalize_de_gloss
-    
-    cache_key = 'en_words' if language == 'en' else 'de_words'
+
+    language = language.lower()
+    native_language = native_language.lower()
+    lemma_key = build_field_key(language, 'lemma')
+    gloss_key = build_field_key(native_language, 'gloss')
+    bucket = _language_bucket(cache, language)
     
     # Create mapping: normalized word -> word dict (for metadata)
     # Support both 'Word' (new) and 'word' (old batch format)
@@ -124,9 +150,7 @@ def add_to_cache(cards: list, words: list, language: str, cache: Dict,
     
     # Create Lemma index for duplicate detection
     existing_lemmas = {}
-    for word_id, card in cache.get(cache_key, {}).items():
-        # Get lemma based on language
-        lemma_key = 'EN_lemma' if language == 'en' else 'DE_lemma'
+    for word_id, card in bucket.items():
         lemma = card.get(lemma_key, '').lower().strip()
         if lemma:
             existing_lemmas[lemma] = word_id
@@ -145,7 +169,6 @@ def add_to_cache(cards: list, words: list, language: str, cache: Dict,
             continue
         
         # Get Lemma from card based on language
-        lemma_key = 'EN_lemma' if language == 'en' else 'DE_lemma'
         lemma = card.get(lemma_key, '').lower().strip()
         
         if not lemma:
@@ -161,8 +184,8 @@ def add_to_cache(cards: list, words: list, language: str, cache: Dict,
             continue
         
         # Normalize German translation (only for EN words)
-        if language == 'en' and 'DE_gloss' in card:
-            card['DE_gloss'] = normalize_de_gloss(card['DE_gloss'])
+        if native_language == 'de' and gloss_key in card:
+            card[gloss_key] = normalize_de_gloss(card[gloss_key])
         
         # Get word dict for metadata (Book from batch has priority)
         word_dict = word_to_metadata.get(original_word)
@@ -177,11 +200,10 @@ def add_to_cache(cards: list, words: list, language: str, cache: Dict,
             card['Book'] = 'Unknown'
         
         # Generate Word-ID from Lemma
-        prefix = 'en' if language == 'en' else 'de'
-        word_id = f"{prefix}:{lemma}"
-        
+        word_id = f"{language}:{lemma}"
+
         # No duplicate - add
-        cache[cache_key][word_id] = card
+        bucket[word_id] = card
         existing_lemmas[lemma] = word_id
         matched_count += 1
     
@@ -205,18 +227,16 @@ def is_word_translated(cache: Dict, lemma: str, language: str) -> bool:
     Returns:
         True if word exists in cache
     """
-    key = 'en_words' if language == 'en' else 'de_words'
+    languages = cache.get('languages', {})
+    bucket = languages.get(language.lower(), {})
     lemma_lower = lemma.lower().strip()
-    
-    # Check both new format (key = "en:lemma") and old format
-    word_id_new = f"{'en' if language == 'en' else 'de'}:{lemma_lower}"
-    
-    if word_id_new in cache.get(key, {}):
+    word_id_new = f"{language.lower()}:{lemma_lower}"
+
+    if word_id_new in bucket:
         return True
-    
-    # Fallback: check if any cached card has this lemma
-    for card in cache.get(key, {}).values():
-        lemma_key = 'EN_lemma' if language == 'en' else 'DE_lemma'
+
+    lemma_key = build_field_key(language, 'lemma')
+    for card in bucket.values():
         cached_lemma = card.get(lemma_key, '').lower().strip()
         if cached_lemma == lemma_lower:
             return True
@@ -236,8 +256,9 @@ def get_from_cache(cache: Dict, lemma: str, language: str) -> Optional[Dict]:
     Returns:
         Card dictionary or None if not found
     """
-    key = 'en_words' if language == 'en' else 'de_words'
-    return cache.get(key, {}).get(lemma.lower())
+    bucket = cache.get('languages', {}).get(language.lower(), {})
+    word_id = f"{language.lower()}:{lemma.lower()}"
+    return bucket.get(word_id)
 
 
 def remove_from_cache(cache: Dict, lemma: str, language: str) -> bool:
@@ -252,11 +273,10 @@ def remove_from_cache(cache: Dict, lemma: str, language: str) -> bool:
     Returns:
         True if word was found and removed
     """
-    key = 'en_words' if language == 'en' else 'de_words'
-    lemma_lower = lemma.lower()
-    
-    if lemma_lower in cache.get(key, {}):
-        del cache[key][lemma_lower]
+    bucket = cache.get('languages', {}).get(language.lower(), {})
+    word_id = f"{language.lower()}:{lemma.lower()}"
+    if word_id in bucket:
+        del bucket[word_id]
         return True
     
     return False
@@ -274,18 +294,15 @@ def merge_caches(cache1: Dict, cache2: Dict) -> Dict:
         Merged cache dictionary
     """
     merged = {
-        'en_words': {},
-        'de_words': {}
+        'version': 2,
+        'languages': {}
     }
-    
-    # Merge EN words
-    merged['en_words'].update(cache1.get('en_words', {}))
-    merged['en_words'].update(cache2.get('en_words', {}))
-    
-    # Merge DE words
-    merged['de_words'].update(cache1.get('de_words', {}))
-    merged['de_words'].update(cache2.get('de_words', {}))
-    
+
+    for cache in (cache1, cache2):
+        for lang, words in cache.get('languages', {}).items():
+            bucket = merged['languages'].setdefault(lang, {})
+            bucket.update(words)
+
     return merged
 
 
@@ -299,11 +316,7 @@ def get_cache_stats(cache: Dict) -> Dict:
     Returns:
         Statistics dictionary
     """
-    en_count = len(cache.get('en_words', {}))
-    de_count = len(cache.get('de_words', {}))
-    
-    return {
-        'total': en_count + de_count,
-        'en': en_count,
-        'de': de_count
-    }
+    languages = cache.get('languages', {})
+    stats = {lang: len(entries) for lang, entries in languages.items()}
+    stats['total'] = sum(stats.values())
+    return stats
