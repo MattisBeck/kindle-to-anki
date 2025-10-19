@@ -308,13 +308,9 @@ def process_batch_with_gemini(words_batch: List[Dict], language: str, genai,
                         # Create card with Context_HTML (highlighted or cloze)
                         usage_plain = word_data.get('usage', '')
 
-                        # Always keep a bold version for EN→DE and DE→DE cards
+                        # Create context with <b>word</b> highlighting
+                        # export.py will convert to {{c1::word}} for cloze cards on-the-fly
                         context_html = make_context_html(usage_plain, word_data['word'], use_cloze=False)
-
-                        # For DE→EN we need a cloze version, but only EN source words require it
-                        context_cloze = None
-                        if language == 'en':
-                            context_cloze = make_context_html(usage_plain, word_data['word'], use_cloze=True)
                         
                         # Extract translation/definition
                         translation = gemini_result.get('DE_gloss', '') if language == 'en' else ''
@@ -328,7 +324,6 @@ def process_batch_with_gemini(words_batch: List[Dict], language: str, genai,
                                 'EN_definition': definition,
                                 'DE_gloss': translation,
                                 'Context_HTML': context_html,
-                                'Context_Cloze': context_cloze or '',
                                 'Notes': gemini_result.get('Notes', ''),
                                 'Book': word_data.get('book', 'Unknown')
                             }

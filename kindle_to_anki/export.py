@@ -17,6 +17,23 @@ def _ensure_bold_context(card: Dict) -> str:
     return boldified.replace('}}', '</b>', 1)
 
 
+def _ensure_cloze_context(card: Dict) -> str:
+    """Return context HTML with cloze markup for DE→EN cards."""
+
+    context_html = card.get('Context_HTML', '')
+
+    # If already cloze, return as-is
+    if '{{c1::' in context_html:
+        return context_html
+
+    # If bold, convert to cloze
+    if '<b>' in context_html:
+        clozified = context_html.replace('<b>', '{{c1::', 1)
+        return clozified.replace('</b>', '}}', 1)
+
+    return context_html
+
+
 def create_tsv_file(cards: List[Dict], output_file: str, card_type: str, verbose: bool = False):
     """Create a TSV file ready for Anki import."""
 
@@ -39,7 +56,12 @@ def create_tsv_file(cards: List[Dict], output_file: str, card_type: str, verbose
 
     for card in cards:
         notes = card.get('Notes', '')
-        context_html = _ensure_bold_context(card)
+        
+        # For DE→EN, use cloze; for EN→DE and DE→DE, use bold
+        if card_type == 'de_en':
+            context_html = _ensure_cloze_context(card)
+        else:
+            context_html = _ensure_bold_context(card)
 
         if card_type == 'de_de':
             line = f"{card.get('DE_lemma', '')}\t"
@@ -59,12 +81,11 @@ def create_tsv_file(cards: List[Dict], output_file: str, card_type: str, verbose
             line += f"{notes}\n"
 
         else:  # de_en
-            context_for_cloze = card.get('Context_Cloze') or context_html
             line = f"{card.get('DE_gloss', '')}\t"
             line += f"{card.get('EN_lemma', '')}\t"
             line += f"{card.get('Original_word', '')}\t"
             line += f"{card.get('EN_definition', '')}\t"
-            line += f"{context_for_cloze}\t"
+            line += f"{context_html}\t"  # Already has cloze from _ensure_cloze_context
             line += f"{card.get('Book', '')}\t"
             line += f"{notes}\n"
 
@@ -95,17 +116,18 @@ def create_all_tsv_files(en_cards: List[Dict], de_cards: List[Dict], verbose: bo
     tsv_dir = Path(CONFIG['TSV_OUTPUT_DIR'])
     tsv_dir.mkdir(parents=True, exist_ok=True)
     
-    # EN → DE cards
+    # EN → DE cards (English word → German translation)
     if en_cards:
         output_file = tsv_dir / 'anki_en_de.tsv'
         create_tsv_file(en_cards, str(output_file), 'en_de', verbose)
     
-    # DE → EN cards
-    if de_cards:
+    # DE → EN cards (German translation → English word) - REVERSE of EN→DE!
+    # WICHTIG: Verwendet en_cards, nicht de_cards!
+    if en_cards:
         output_file = tsv_dir / 'anki_de_en.tsv'
-        create_tsv_file(de_cards, str(output_file), 'de_en', verbose)
+        create_tsv_file(en_cards, str(output_file), 'de_en', verbose)
     
-    # DE → DE cards (only definition, no translation)
+    # DE → DE cards (German word → German definition)
     if de_cards:
         output_file = tsv_dir / 'anki_de_de.tsv'
         create_tsv_file(de_cards, str(output_file), 'de_de', verbose)

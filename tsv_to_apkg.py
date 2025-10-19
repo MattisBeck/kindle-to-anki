@@ -361,14 +361,14 @@ def create_en_de_model() -> genanki.Model:
 
 
 def create_de_en_model() -> genanki.Model:
-    """Creates the DE→EN Cloze card model (Deutsch → English with context cloze)"""
+    """Creates the DE→EN card model (Deutsch → English with context cloze)"""
     
     # Fixed model ID for DE→EN (ensures consistent GUIDs across runs)
     model_id = 1607392320  # Hash of "Kindle_DE_EN"
     
     return genanki.Model(
         model_id,
-        'Kindle DE→EN Cloze',
+        'Kindle DE→EN',
         fields=[
             {'name': 'DE_gloss'},
             {'name': 'EN_lemma'},
@@ -496,19 +496,20 @@ def create_de_de_model() -> genanki.Model:
 # TSV to APKG Conversion
 # ============================================================================
 
-def generate_guid_from_lemma(lemma: str, model_id: int) -> int:
+def generate_guid_from_lemma(lemma: str, model_id: int, card_type: str = '') -> int:
     """
-    Generiert eine eindeutige GUID basierend nur auf dem Lemma-Feld.
+    Generiert eine eindeutige GUID basierend auf Lemma UND Kartentyp.
     
-    Dadurch werden Notizen mit gleichem Lemma als identisch erkannt,
-    auch wenn sich andere Felder (Definition, Notes) ändern.
+    WICHTIG: EN→DE und DE→EN müssen unterschiedliche GUIDs haben,
+    auch wenn sie dasselbe englische Wort verwenden!
     
-    Beim Re-Import werden alte Karten mit gleichem Lemma überschrieben,
+    Beim Re-Import werden alte Karten mit gleichem Lemma UND Typ überschrieben,
     aber der Learning-Fortschritt bleibt erhalten!
     
     Args:
         lemma: Das Lemma (erstes Feld der Karte)
         model_id: Die Model-ID
+        card_type: Der Kartentyp ('en_de', 'de_en', 'de_de') für zusätzliche Eindeutigkeit
     
     Returns:
         GUID als Integer
@@ -516,14 +517,35 @@ def generate_guid_from_lemma(lemma: str, model_id: int) -> int:
     # Normalisiere Lemma (lowercase, whitespace trimmen)
     normalized_lemma = lemma.strip().lower()
     
-    # Erstelle eindeutigen Hash aus Lemma + Model ID
-    hash_str = f"{model_id}_{normalized_lemma}"
+    # Erstelle eindeutigen Hash aus Lemma + Model ID + Kartentyp
+    # Der Kartentyp stellt sicher, dass EN→DE und DE→EN unterschiedliche GUIDs haben
+    hash_str = f"{model_id}_{card_type}_{normalized_lemma}"
     hash_bytes = hashlib.md5(hash_str.encode('utf-8')).digest()
     
     # Konvertiere zu Integer (Anki braucht Integers für GUIDs)
     guid = int.from_bytes(hash_bytes[:8], byteorder='big', signed=True)
     
     return guid
+
+
+def convert_bold_to_cloze(html: str) -> str:
+    """
+    Konvertiert <b>word</b> zu {{c1::word}} für Cloze-Karten.
+    
+    Für DE→EN Karten: Das englische Wort wird versteckt (cloze),
+    damit es nicht gespoilert wird.
+    
+    Args:
+        html: HTML-String mit <b>word</b> Markierung
+    
+    Returns:
+        HTML-String mit {{c1::word}} Cloze-Markierung
+    """
+    import re
+    # Ersetze <b>...</b> mit {{c1::...}}
+    result = re.sub(r'<b>(.*?)</b>', r'{{c1::\1}}', html)
+    return result
+
 
 
 def read_tsv_file(tsv_path: Path, card_type: str) -> List[List[str]]:
@@ -574,12 +596,17 @@ def read_tsv_file(tsv_path: Path, card_type: str) -> List[List[str]]:
                 ]
             elif card_type == 'de_en':
                 # DE→EN cards: REVERSE of EN→DE (German translation → English word)
+                # WICHTIG: Context_HTML muss zu Cloze konvertiert werden ({{c1::word}} statt <b>word</b>)
                 # APKG fields: DE_gloss, EN_lemma, EN_definition, Context_HTML, Book, Notes
+                context_html = row_dict.get('Context_HTML', '')
+                # Konvertiere <b>word</b> zu {{c1::word}} für Cloze-Funktionalität
+                context_cloze = convert_bold_to_cloze(context_html)
+                
                 row = [
                     row_dict.get('DE_gloss', ''),        # DE_gloss (German translation = front)
                     row_dict.get('EN_lemma', ''),        # EN_lemma (English word = back)
                     row_dict.get('EN_definition', ''),   # EN_definition
-                    row_dict.get('Context_HTML', ''),    # Context_HTML
+                    context_cloze,                       # Context_HTML (mit Cloze)
                     row_dict.get('Book', ''),            # Book
                     row_dict.get('Notes', '')            # Notes
                 ]
@@ -644,7 +671,7 @@ def convert_tsv_to_apkg(tsv_path: Path, output_path: Path, card_type: str) -> bo
     deck_id = random.randrange(1 << 30, 1 << 31)
     deck = genanki.Deck(deck_id, deck_name)
     
-    # Add notes to deck with custom GUID based on lemma only
+    # Add notes to deck with custom GUID based on lemma + card_type
     for row in rows:
         # Ensure all fields are strings and handle empty fields
         fields = [str(field) if field else '' for field in row]
@@ -652,8 +679,8 @@ def convert_tsv_to_apkg(tsv_path: Path, output_path: Path, card_type: str) -> bo
         # Extract lemma (first field) for GUID generation
         lemma = fields[0]
         
-        # Generate GUID from lemma only (ensures same lemma = same GUID)
-        guid = generate_guid_from_lemma(lemma, model.model_id)
+        # Generate GUID from lemma + card_type (ensures EN→DE and DE→EN have different GUIDs)
+        guid = generate_guid_from_lemma(lemma, model.model_id, card_type)
         
         note = genanki.Note(
             model=model,

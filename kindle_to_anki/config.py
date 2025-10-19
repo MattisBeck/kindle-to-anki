@@ -1,20 +1,9 @@
 """
 Configuration settings for Kindle to Anki converter
 """
-import os
-from pathlib import Path
-
-# Try to load .env if python-dotenv is available
-try:
-    from dotenv import load_dotenv
-    env_path = Path(__file__).parent.parent / '.env'
-    load_dotenv(dotenv_path=env_path)
-except ImportError:
-    pass  # python-dotenv not installed, will use empty string as default
-
 CONFIG = {
-    # Gemini API Key (required) - loaded from .env file or set directly here
-    'GEMINI_API_KEY': os.getenv('GEMINI_API_KEY', ''),
+    # Gemini API Key (required)
+    'GEMINI_API_KEY': "", 
     
     # Paths
     'VOCAB_DB_PATH': 'put_vocab_db_here/vocab.db',  # Path to Kindle vocabulary database
