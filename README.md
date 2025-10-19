@@ -1,3 +1,7 @@
+ If this project helps you, **please give it a ⭐ on GitHub** — it really boosts visibility and momentum.
+
+[![GitHub Stars](https://img.shields.io/github/stars/MattisBeck/kindle-to-anki?style=social)](https://github.com/MattisBeck/kindle-to-anki/stargazers)
+
 
 # Kindle to Anki Converter
 
@@ -8,7 +12,7 @@ Great for learning a new language and even improving your own!
 
 - **Automatic Lemmatization** with spaCy
 - **AI-Generated Definitions** via Gemini 2.0 Flash
-- **3 Card Types** - EN→DE, DE→EN, DE→DE
+- **Multilingual card types (3 formats)** – L2→L1 (translation), L1→L2 (translation, cloze), L1→L1 (definition)
 - **Direct APKG Export** with custom card design
 - **Smart Caching** - only new vocabulary is translated; so you don't need to start all over again
 - **Token-Optimized** (~75 tokens per word)
@@ -31,9 +35,9 @@ Great for learning a new language and even improving your own!
 2. **Install Dependencies**:
    ```bash
    pip install -r requirements.txt
-   python -m spacy download en_core_web_sm
-   python -m spacy download de_core_news_sm
    ```
+   
+   > 💡 **Note**: The script will automatically tell you which spaCy language models you need to install based on your configured languages. Just run the script first, and it will guide you!
 
 3. **Get your free Gemini API Key**:
    - Go to https://aistudio.google.com/apikey
@@ -43,6 +47,8 @@ Great for learning a new language and even improving your own!
    ```python
    CONFIG = {
        'GEMINI_API_KEY': 'YOUR-API-KEY-HERE',
+       'SOURCE_LANGUAGE': 'de',  # Your native language
+       'TARGET_LANGUAGE': 'en',  # Language you're learning
        ...
    }
    ```
@@ -154,6 +160,31 @@ graph LR
 - Python adds: `Original_word`, `Lemma`, `Context_HTML`, `Book`
 - **Savings**: ~59% fewer output tokens
 
+## 🌍 Supported Languages
+
+The converter currently supports the following languages:
+
+| Language | Code | spaCy Model | Status |
+|----------|------|-------------|--------|
+| 🇩🇪 German (Deutsch) | `de` | `de_core_news_sm` | ✅ Full support |
+| 🇬🇧 English | `en` | `en_core_web_sm` | ✅ Full support |
+| 🇪🇸 Spanish (Español) | `es` | `es_core_news_sm` | ✅ Full support |
+| 🇫🇷 French (Français) | `fr` | `fr_core_news_sm` | ✅ Full support |
+| 🇵🇱 Polish (Polski) | `pl` | `pl_core_news_sm` | ✅ Full support |
+
+**Configure your language pair** in `kindle_to_anki/config.py`:
+```python
+CONFIG = {
+    'SOURCE_LANGUAGE': 'de',  # Your native language (cards & prompts)
+    'TARGET_LANGUAGE': 'en',  # Language you're learning (Kindle book)
+    ...
+}
+```
+
+> 💡 **The script will automatically detect which spaCy models you need!** When you run the script, it will tell you exactly which models to install if they're missing.
+
+**Missing your language?** [Open an issue on GitHub](https://github.com/MattisBeck/kindle-to-anki/issues) and request support for your language!
+
 ## 📊 Example Output
 
 **Sample run (360 EN + 528 DE words):**
@@ -170,9 +201,10 @@ graph LR
 ## 🛠️ Troubleshooting
 
 ### spaCy Models Missing
+The script will tell you which models you need. Simply run the command it suggests, for example:
 ```bash
-python -m spacy download en_core_web_sm
 python -m spacy download de_core_news_sm
+python -m spacy download en_core_web_sm
 ```
 
 ### Gemini API Quota Exceeded
@@ -215,9 +247,12 @@ MIT License - Free for private and commercial use.
 - **genanki** - APKG package generation
 ---
 
-Viel Erfolg beim Vokabellernen! 🎉
+Have Fun! 🎉
 
 ---
+> Gefällt dir das Projekt? **Gib ihm ein ⭐️ auf GitHub** – das hilft Sichtbarkeit & Weiterentwicklung enorm.
+
+[![GitHub Stars](https://img.shields.io/github/stars/MattisBeck/kindle-to-anki?style=social)](https://github.com/MattisBeck/kindle-to-anki/stargazers)
 
 # Kindle to Anki Converter (Deutsch)
 
@@ -228,7 +263,7 @@ Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigen
 
 - **Automatische Lemmatisierung** mit spaCy
 - **KI-generierte Definitionen** via Gemini 2.0 Flash
-- **3 Kartentypen** - EN→DE, DE→EN, DE→DE
+- **Mehrsprachige Kartentypen (3 Formate)** – L2→L1 (Übersetzung), L1→L2 (Übersetzung, Cloze), L1→L1 (Definition)
 - **Direkter APKG-Export** mit eigenem Kartendesign
 - **Intelligentes Caching** - nur neue Vokabeln werden übersetzt; du musst nicht von vorne anfangen
 - **Token-optimiert** (ca. 75 Tokens pro Wort)
@@ -251,9 +286,9 @@ Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigen
 2. **Abhängigkeiten installieren**:
    ```bash
    pip install -r requirements.txt
-   python -m spacy download en_core_web_sm
-   python -m spacy download de_core_news_sm
    ```
+   
+   > 💡 **Hinweis**: Das Skript sagt dir automatisch, welche spaCy-Sprachmodelle du installieren musst, basierend auf deinen konfigurierten Sprachen. Führe einfach das Skript aus, es wird dich anleiten!
 
 3. **Kostenlosen Gemini API Key holen**:
    - Gehe zu https://aistudio.google.com/apikey
@@ -263,6 +298,8 @@ Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigen
    ```python
    CONFIG = {
        'GEMINI_API_KEY': 'DEIN-API-KEY-HIER',
+       'SOURCE_LANGUAGE': 'de',  # Deine Muttersprache
+       'TARGET_LANGUAGE': 'en',  # Sprache, die du lernst
        ...
    }
    ```
@@ -372,7 +409,32 @@ graph LR
 **Token-Optimierung:**
 - Gemini generiert nur: `EN_definition`, `DE_gloss`, `Notes`
 - Python ergänzt: `Original_word`, `Lemma`, `Context_HTML`, `Book`
-- **Ersparnis**: ~59% weniger Output-Tokens
+- **Einsparung**: ~59% weniger Output-Tokens
+
+## 🌍 Unterstützte Sprachen
+
+Der Converter unterstützt derzeit folgende Sprachen:
+
+| Sprache | Code | spaCy-Modell | Status |
+|---------|------|--------------|--------|
+| 🇩🇪 Deutsch (German) | `de` | `de_core_news_sm` | ✅ Vollständig unterstützt |
+| 🇬🇧 Englisch (English) | `en` | `en_core_web_sm` | ✅ Vollständig unterstützt |
+| 🇪🇸 Spanisch (Español) | `es` | `es_core_news_sm` | ✅ Vollständig unterstützt |
+| 🇫🇷 Französisch (Français) | `fr` | `fr_core_news_sm` | ✅ Vollständig unterstützt |
+| 🇵🇱 Polnisch (Polski) | `pl` | `pl_core_news_sm` | ✅ Vollständig unterstützt |
+
+**Konfiguriere dein Sprachpaar** in `kindle_to_anki/config.py`:
+```python
+CONFIG = {
+    'SOURCE_LANGUAGE': 'de',  # Deine Muttersprache (Karten & Prompts)
+    'TARGET_LANGUAGE': 'en',  # Sprache, die du lernst (Kindle-Buch)
+    ...
+}
+```
+
+> 💡 **Das Skript erkennt automatisch, welche spaCy-Modelle du brauchst!** Wenn du das Skript ausführst, sagt es dir genau, welche Modelle du installieren musst, falls sie fehlen.
+
+**Fehlt deine Sprache?** [Erstelle ein Issue auf GitHub](https://github.com/MattisBeck/kindle-to-anki/issues) und bitte um Unterstützung für deine Sprache!
 
 ## 📊 Beispiel-Ausgabe
 
@@ -390,9 +452,10 @@ graph LR
 ## 🛠️ Fehlerbehebung
 
 ### spaCy-Modelle fehlen
+Das Skript sagt dir, welche Modelle du brauchst. Führe einfach den vorgeschlagenen Befehl aus, zum Beispiel:
 ```bash
-python -m spacy download en_core_web_sm
 python -m spacy download de_core_news_sm
+python -m spacy download en_core_web_sm
 ```
 
 ### Gemini API Quota überschritten

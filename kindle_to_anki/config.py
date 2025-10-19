@@ -9,7 +9,7 @@ CONFIG = {
     # SOURCE_LANGUAGE = Native language (cards & prompts default to this language)
     # TARGET_LANGUAGE = Language you are learning / Kindle book language
     'SOURCE_LANGUAGE': 'de',
-    'TARGET_LANGUAGE': 'en',
+    'TARGET_LANGUAGE': 'es',
 
     # Paths
     'VOCAB_DB_PATH': 'put_vocab_db_here/vocab.db',  # Path to Kindle vocabulary database

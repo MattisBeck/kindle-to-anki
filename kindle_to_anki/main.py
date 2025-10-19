@@ -45,9 +45,8 @@ def load_spacy_models(languages: Sequence[str], verbose: bool = False):
         import spacy  # type: ignore
     except ImportError:
         SPACY_IMPORT_FAILED = True
-        if verbose:
-            print("  ⚠️  spaCy not installed! Lemmatization will fall back to lowercase only.")
-            print("     Install with: pip install spacy")
+        print("  ⚠️  spaCy not installed! Lemmatization will fall back to lowercase only.")
+        print("     Install with: pip install spacy")
         return
 
     for lang in normalized_languages:
@@ -56,8 +55,7 @@ def load_spacy_models(languages: Sequence[str], verbose: bool = False):
 
         model_name = SPACY_MODELS.get(lang)
         if not model_name:
-            if verbose:
-                print(f"  ⚠️  No spaCy model configured for '{lang}'.")
+            print(f"  ⚠️  No spaCy model configured for '{lang}'.")
             NLP_MODELS[lang] = None
             continue
 
@@ -67,9 +65,9 @@ def load_spacy_models(languages: Sequence[str], verbose: bool = False):
             NLP_MODELS[lang] = spacy.load(model_name)
         except OSError:
             NLP_MODELS[lang] = None
-            if verbose:
-                print(f"  ⚠️  spaCy model '{model_name}' not found!")
-                print(f"     Install with: python -m spacy download {model_name}")
+            # Always show error messages for missing models (critical info!)
+            print(f"  ⚠️  spaCy model '{model_name}' not found!")
+            print(f"     Install with: python -m spacy download {model_name}")
 
 
 def process_language_batch(words: List[Dict], language: str,
