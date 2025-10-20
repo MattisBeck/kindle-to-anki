@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from .config import normalize_language_code
+from .helpers import normalize_language_code
 
 
 def connect_to_db(db_path: str) -> sqlite3.Connection:

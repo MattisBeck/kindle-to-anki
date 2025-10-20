@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Dict, List
 
-from .config import build_field_key, format_language_pair
+from .helpers import build_field_key, format_language_pair
 
 
 def _ensure_bold_context(card: Dict) -> str:

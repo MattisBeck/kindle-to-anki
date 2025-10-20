@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import Dict, Optional
 
-from .config import build_field_key
+from .helpers import build_field_key
 
 
 def load_translated_cache(cache_file: str, verbose: bool = False) -> Dict:

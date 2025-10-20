@@ -7,7 +7,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from .config import build_field_key
+from .helpers import build_field_key
 
 
 def log_error(message: str, error_file: str = 'anki_cards/errors.log', verbose: bool = False):

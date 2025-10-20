@@ -81,6 +81,7 @@ Kindle-to-Anki/
 │   ├── database.py            # Kindle vocab.db access helpers
 │   ├── export.py              # TSV/APKG writers and validation helpers
 │   ├── gemini_api.py          # Prompting logic for Gemini 2.0 Flash
+│   ├── helpers.py             # Validation and language handling utilities
 │   ├── main.py                # Orchestrates the ETL pipeline
 │   ├── normalization.py       # Lemmatization and text cleanup utilities
 │   └── utils.py               # Logging, progress, and misc helpers
@@ -140,6 +141,24 @@ CONFIG = {
 - 💡 Linguistic notes (register, phrasal verbs, idioms, etc.)
 - 🌙 Night mode support
 - 📱 Responsive design
+
+### 📸 Card Examples
+
+<div align="center">
+
+**EN→DE Cards (iOS)**  
+
+<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-en_de-ios-light.gif#gh-light-mode-only" alt="EN→DE Light" width="240"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-en_de-ios-dark.gif#gh-dark-mode-only" alt="EN→DE Dark" width="240"/>
+
+**DE→EN Cards (macOS)**
+
+<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_en-mac-light.gif#gh-light-mode-only" alt="DE→EN Light" width="480"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_en-mac-dark.gif#gh-dark-mode-only" alt="DE→EN Dark" width="480"/>
+
+**DE→DE Cards (macOS)**
+
+<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_de-mac-light.gif#gh-light-mode-only" alt="DE→DE Light" width="480"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_de-mac-dark.gif#gh-dark-mode-only" alt="DE→DE Dark" width="480"/>
+
+</div>
 
 ## 🔄 Workflow
 
@@ -332,6 +351,7 @@ Kindle-to-Anki/
 │   ├── database.py            # Zugriffshilfen auf die Kindle vocab.db
 │   ├── export.py              # TSV/APKG-Exporter und Validierungen
 │   ├── gemini_api.py          # Prompt-Logik für Gemini 2.0 Flash
+│   ├── helpers.py             # Validierungs- und Sprachverarbeitungsfunktionen
 │   ├── main.py                # Orchestriert die ETL-Pipeline
 │   ├── normalization.py       # Lemmatisierungs- und Textbereinigungstools
 │   └── utils.py               # Logging, Fortschritt und weitere Helfer
@@ -391,6 +411,24 @@ CONFIG = {
 - 💡 Sprachliche Hinweise (Register, Phrasal Verbs, Idiome, etc.)
 - 🌙 Night Mode Support
 - 📱 Responsive Design
+
+### 📸 Kartenbeispiele
+
+<div align="center">
+
+**EN→DE Karten (iOS)**
+
+<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-en_de-ios-light.gif#gh-light-mode-only" alt="EN→DE Light" width="240"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-en_de-ios-dark.gif#gh-dark-mode-only" alt="EN→DE Dark" width="240"/>
+
+**DE→EN Karten (macOS)**
+
+<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_en-mac-light.gif#gh-light-mode-only" alt="DE→EN Light" width="480"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_en-mac-dark.gif#gh-dark-mode-only" alt="DE→EN Dark" width="480"/>
+
+**DE→DE Karten (macOS)**  
+
+<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_de-mac-light.gif#gh-light-mode-only" alt="DE→DE Light" width="480"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_de-mac-dark.gif#gh-dark-mode-only" alt="DE→DE Dark" width="480"/>
+
+</div>
 
 ## 🔄 Workflow
 

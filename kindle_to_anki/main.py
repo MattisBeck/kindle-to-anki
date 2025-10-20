@@ -8,11 +8,11 @@ from pathlib import Path
 from typing import Dict, List, Sequence
 
 # Import all modules
-from .config import (
-    CONFIG,
-    SPACY_MODELS,
+from .config import CONFIG, SPACY_MODELS
+from .helpers import (
     get_language_meta,
     validate_language_configuration,
+    validate_api_key,
 )
 from .database import connect_to_db, get_vocabulary_data, filter_vocabulary_by_language
 from .normalization import lemmatize_word, normalize_book_title, load_book_titles_from_cache
@@ -149,14 +149,18 @@ def main():
     """
     start_time = time.time()
     verbose = CONFIG.get('VERBOSE', False)
-    native_language, target_language = validate_language_configuration()
-    native_meta = get_language_meta(native_language)
-    target_meta = get_language_meta(target_language)
-
+    
     print("=" * 70)
     print("Kindle to Anki Converter v2.0")
     print("=" * 70)
     print()
+    
+    # Validate API key before any processing
+    validate_api_key()
+    
+    native_language, target_language = validate_language_configuration()
+    native_meta = get_language_meta(native_language)
+    target_meta = get_language_meta(target_language)
 
     if verbose:
         print("📋 Configuration:")

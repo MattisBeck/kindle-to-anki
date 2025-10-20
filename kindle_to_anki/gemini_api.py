@@ -8,7 +8,8 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from .config import CONFIG, build_field_key, get_language_meta
+from .config import CONFIG
+from .helpers import build_field_key, get_language_meta
 
 
 def make_context_html(usage: str, original_word: str, use_cloze: bool = False) -> str:

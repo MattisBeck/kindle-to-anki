@@ -3,13 +3,14 @@ Configuration settings for Kindle to Anki converter
 """
 CONFIG = {
     # Gemini API Key (required)
-    'GEMINI_API_KEY': "", 
+    'GEMINI_API_KEY': '', 
     
     # Language configuration
     # SOURCE_LANGUAGE = Native language (cards & prompts default to this language)
     # TARGET_LANGUAGE = Language you are learning / Kindle book language
     'SOURCE_LANGUAGE': 'de',
-    'TARGET_LANGUAGE': 'es',
+    'TARGET_LANGUAGE': 'en',
+    'TARGET_LANGUAGE': 'en',
 
     # Paths
     'VOCAB_DB_PATH': 'put_vocab_db_here/vocab.db',  # Path to Kindle vocabulary database
@@ -86,37 +87,3 @@ SUPPORTED_LANGUAGES = {
 
 # Derive spaCy model mappings from supported languages
 SPACY_MODELS = {code: meta['spacy_model'] for code, meta in SUPPORTED_LANGUAGES.items()}
-
-
-def normalize_language_code(lang: str) -> str:
-    """Normalize Kindle language codes (e.g. 'en_US' → 'en')."""
-    if not lang:
-        return ''
-    return lang.split('_', 1)[0].lower()
-
-
-def get_language_meta(code: str) -> dict:
-    """Return metadata for a supported language or raise ValueError."""
-    if code not in SUPPORTED_LANGUAGES:
-        supported = ', '.join(SUPPORTED_LANGUAGES.keys())
-        raise ValueError(f"Unsupported language code '{code}'. Supported: {supported}")
-    return SUPPORTED_LANGUAGES[code]
-
-
-def format_language_pair(native_code: str, target_code: str) -> str:
-    """Return canonical deck/file prefix (e.g. 'de_en')."""
-    return f"{native_code}_{target_code}".lower()
-
-
-def build_field_key(language_code: str, suffix: str) -> str:
-    """Build structured field names like 'EN_lemma'."""
-    return f"{language_code.upper()}_{suffix}"
-
-
-def validate_language_configuration():
-    """Ensure CONFIG languages are supported and return (native, target)."""
-    native = CONFIG.get('SOURCE_LANGUAGE', 'de').lower()
-    target = CONFIG.get('TARGET_LANGUAGE', 'en').lower()
-    get_language_meta(native)
-    get_language_meta(target)
-    return native, target
