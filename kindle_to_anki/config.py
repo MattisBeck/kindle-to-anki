@@ -10,7 +10,6 @@ CONFIG = {
     # TARGET_LANGUAGE = Language you are learning / Kindle book language
     'SOURCE_LANGUAGE': 'de',
     'TARGET_LANGUAGE': 'en',
-    'TARGET_LANGUAGE': 'en',
 
     # Paths
     'VOCAB_DB_PATH': 'put_vocab_db_here/vocab.db',  # Path to Kindle vocabulary database
