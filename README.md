@@ -123,17 +123,17 @@ CONFIG = {
 
 ## 🎨 Card Design
 
-### EN→DE Cards (Blue Theme)
-- **Front**: English word + context
-- **Back**: German translation + definition + notes
+### L2→L1 Cards (Blue Theme)
+- **Front**: L2 word + context
+- **Back**: L1 translation + definition + notes
 
-### DE→EN Cards (Red Theme) - with Cloze
-- **Front**: German translation + context (with hidden original word)
-- **Back**: English word + definition + notes
+### L1→L2 Cards (Red Theme) - with Cloze
+- **Front**: L1 translation + context (with hidden original word)
+- **Back**: L2 word + definition + notes
 
-### DE→DE Cards (Turquoise Theme)
-- **Front**: German word + context
-- **Back**: German definition + notes
+### L1→L1 Cards (Turquoise Theme)
+- **Front**: L1 word + context
+- **Back**: L1 definition + notes
 
 **All cards include:**
 - 📚 Source book
@@ -147,16 +147,13 @@ CONFIG = {
 <div align="center">
 
 **EN→DE Cards (iOS)**  
+<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-en_de-ios-light.gif" alt="EN→DE Light" width="180"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-en_de-ios-dark.gif" alt="EN→DE Dark" width="180"/>
 
-<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-en_de-ios-light.gif#gh-light-mode-only" alt="EN→DE Light" width="240"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-en_de-ios-dark.gif#gh-dark-mode-only" alt="EN→DE Dark" width="240"/>
+**DE→EN Cards (macOS)**  
+<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_en-mac-light.gif" alt="DE→EN Light" width="380"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_en-mac-dark.gif" alt="DE→EN Dark" width="380"/>
 
-**DE→EN Cards (macOS)**
-
-<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_en-mac-light.gif#gh-light-mode-only" alt="DE→EN Light" width="480"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_en-mac-dark.gif#gh-dark-mode-only" alt="DE→EN Dark" width="480"/>
-
-**DE→DE Cards (macOS)**
-
-<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_de-mac-light.gif#gh-light-mode-only" alt="DE→DE Light" width="480"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_de-mac-dark.gif#gh-dark-mode-only" alt="DE→DE Dark" width="480"/>
+**DE→DE Cards (macOS)**  
+<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_de-mac-light.gif" alt="DE→DE Light" width="380"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_de-mac-dark.gif" alt="DE→DE Dark" width="380"/>
 
 </div>
 
@@ -275,7 +272,7 @@ Have Fun! 🎉
 
 # Kindle to Anki Converter (Deutsch)
 
-Ein einfaches Python-Skript, das deine Kindle-vocab.db in kontextbasierte Karteikarten via Gemini umwandelt (kostenloser API-Key verfügbar, Limits meiner Meinung nach aus).
+Ein einfaches Python-Skript, das deine Kindle-vocab.db in kontextbasierte Karteikarten via Gemini umwandelt (kostenloser API-Key verfügbar, Limits reichen meiner Meinung nach aus).
 Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigenen!
 
 ## 🎯 Funktionen
@@ -393,17 +390,17 @@ CONFIG = {
 
 ## 🎨 Kartendesign
 
-### EN→DE Karten (Blaues Theme)
-- **Vorderseite**: Englisches Wort + Kontext
-- **Rückseite**: Deutsche Übersetzung + Definition + Notizen
+### L2→L1 Karten (Blaues Theme)
+- **Vorderseite**: L2-Wort + Kontext
+- **Rückseite**: L1-Übersetzung + Definition + Notizen
 
-### DE→EN Karten (Rotes Theme) - mit Cloze
-- **Vorderseite**: Deutsche Übersetzung + Kontext (mit verstecktem Lückentext-Original-Wort)
-- **Rückseite**: Englisches Wort + Definition + Notizen
+### L1→L2 Karten (Rotes Theme) – mit Cloze
+- **Vorderseite**: L1-Übersetzung + Kontext (mit verstecktem Originalwort)
+- **Rückseite**: L2-Wort + Definition + Notizen
 
-### DE→DE Karten (Türkises Theme)
-- **Vorderseite**: Deutsches Wort + Kontext
-- **Rückseite**: Deutsche Definition + Notizen
+### L1→L1 Karten (Türkises Theme)
+- **Vorderseite**: L1-Wort + Kontext
+- **Rückseite**: L1-Definition + Notizen
 
 **Alle Karten enthalten:**
 - 📚 Quellbuch
@@ -416,17 +413,14 @@ CONFIG = {
 
 <div align="center">
 
-**EN→DE Karten (iOS)**
+**EN→DE Karten (iOS)**  
+<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-en_de-ios-light.gif" alt="EN→DE Light" width="180"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-en_de-ios-dark.gif" alt="EN→DE Dark" width="180"/>
 
-<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-en_de-ios-light.gif#gh-light-mode-only" alt="EN→DE Light" width="240"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-en_de-ios-dark.gif#gh-dark-mode-only" alt="EN→DE Dark" width="240"/>
-
-**DE→EN Karten (macOS)**
-
-<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_en-mac-light.gif#gh-light-mode-only" alt="DE→EN Light" width="480"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_en-mac-dark.gif#gh-dark-mode-only" alt="DE→EN Dark" width="480"/>
+**DE→EN Karten (macOS)**  
+<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_en-mac-light.gif" alt="DE→EN Light" width="380"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_en-mac-dark.gif" alt="DE→EN Dark" width="380"/>
 
 **DE→DE Karten (macOS)**  
-
-<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_de-mac-light.gif#gh-light-mode-only" alt="DE→DE Light" width="480"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_de-mac-dark.gif#gh-dark-mode-only" alt="DE→DE Dark" width="480"/>
+<img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_de-mac-light.gif" alt="DE→DE Light" width="380"/> <img src="https://raw.githubusercontent.com/MattisBeck/github-assets/master/kindle-to-anki/example-de_de-mac-dark.gif" alt="DE→DE Dark" width="380"/>
 
 </div>
 
