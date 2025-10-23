@@ -109,9 +109,9 @@ CONFIG = {
     'DELAY_BETWEEN_BATCHES': 4.5,  # seconds
     
     # Output Options
-    'CREATE_EN_DE_CARDS': True,     # English → German
-    'CREATE_DE_EN_CARDS': True,     # German → English
-    'CREATE_DE_DE_CARDS': True,     # German → German
+    'CREATE_NATIVE_TO_FOREIGN': True,  # Native → Foreign deck (e.g. DE → EN)
+    'CREATE_FOREIGN_TO_NATIVE': True,  # Foreign → Native deck (e.g. EN→ DE)
+    'CREATE_NATIVE_TO_NATIVE': True,  # Native → Native deck (monolingual)
     'CREATE_APKG': True,            # Auto-create APKG packages
     
     # Debugging
