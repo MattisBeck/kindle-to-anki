@@ -115,6 +115,8 @@ def process_language_batch(words: List[Dict], language: str,
         if verbose:
             print(f"  {lang_flag} Batch {i}/{len(batches)} ({len(batch)} words)...", end=" ")
 
+        # Measure API response time for smart delay calculation
+        batch_start = time.time()
         cards = process_batch_with_gemini(
             batch,
             language,
@@ -124,6 +126,7 @@ def process_language_batch(words: List[Dict], language: str,
             verbose=verbose,
             batch_num=i,
         )
+        batch_duration = time.time() - batch_start
 
         if cards:
             all_cards.extend(cards)
@@ -136,9 +139,17 @@ def process_language_batch(words: List[Dict], language: str,
             if verbose:
                 print("❌ Failed")
 
+        # Smart delay: only wait the remaining time to reach DELAY_BETWEEN_BATCHES
         if i < len(batches):
-            delay = CONFIG.get('DELAY_BETWEEN_BATCHES', 4.5)
-            time.sleep(delay)
+            delay_target = CONFIG.get('DELAY_BETWEEN_BATCHES', 4.5)
+            remaining_delay = max(0, delay_target - batch_duration)
+            if remaining_delay > 0:
+                if verbose:
+                    print(f"  ⏱️  API took {batch_duration:.2f}s, waiting {remaining_delay:.2f}s (target: {delay_target}s)")
+                time.sleep(remaining_delay)
+            else:
+                if verbose:
+                    print(f"  ⏱️  API took {batch_duration:.2f}s, no additional delay needed (target: {delay_target}s)")
 
     return all_cards
 

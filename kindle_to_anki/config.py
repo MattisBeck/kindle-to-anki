@@ -21,7 +21,7 @@ CONFIG = {
     
     # Batch settings (to comply with current API limits: RPM 15, TPM 1,000,000, RPD 200; those may change)
     'BATCH_SIZE': 20,  # Words per batch
-    'DELAY_BETWEEN_BATCHES': 4.5,  # Seconds delay between batches (for RPM 15 = ~4-5 sec)
+    'DELAY_BETWEEN_BATCHES': 4.5,  # Target seconds between batch starts (smart delay accounts for API response time)
     'MAX_RETRIES': 3,  # Number of retry attempts on API errors
     'RETRY_DELAY': 10,  # Seconds to wait before retry
     
