@@ -73,9 +73,10 @@ Kindle-to-Anki/
 ├── README.md                  # Setup guide and bilingual documentation
 ├── requirements.txt           # Minimal dependency list for pip install
 ├── kindle-to-anki.py          # Thin wrapper that calls the package entry point
-├── tsv_to_apkg.py             # Converts TSV exports into APKG decks
+├── tsv_to_apkg.py             # Wrapper that turns existing TSV exports into APKG decks
 ├── kindle_to_anki/            # Modular application code that powers the CLI
 │   ├── __init__.py            # Package metadata (version etc.)
+│   ├── apkg_builder.py        # Central APKG builder and template loader
 │   ├── cache.py               # Translation cache loader/saver utilities
 │   ├── config.py              # Central runtime configuration flags
 │   ├── database.py            # Kindle vocab.db access helpers
@@ -84,6 +85,7 @@ Kindle-to-Anki/
 │   ├── helpers.py             # Validation and language handling utilities
 │   ├── main.py                # Orchestrates the ETL pipeline
 │   ├── normalization.py       # Lemmatization and text cleanup utilities
+│   ├── templates/             # HTML/CSS card templates used during APKG export
 │   └── utils.py               # Logging, progress, and misc helpers
 ├── anki_cards/                # Generated artifacts and logs
 │   ├── apkg_files/            # Ready-to-import Anki decks
@@ -98,27 +100,39 @@ Edit `kindle_to_anki/config.py` to customize:
 
 ```python
 CONFIG = {
-    # API & Paths
-    'GEMINI_API_KEY': 'your-api-key',
+   # API & Languages
+   'GEMINI_API_KEY': 'your-api-key',  # Required Google Gemini key
+   'SOURCE_LANGUAGE': 'de',           # Native language for prompts/cards
+   'TARGET_LANGUAGE': 'en',           # Language you are learning
+
+   # Paths
     'VOCAB_DB_PATH': 'put_vocab_db_here/vocab.db',
     'TSV_OUTPUT_DIR': 'anki_cards/tsv_files',
-    'APKG_OUTPUT_DIR': 'anki_cards/apkg_files',
+   'APKG_OUTPUT_DIR': 'anki_cards/apkg_files',
+   'PROGRESS_FILE': 'anki_cards/progress.json',
+   'ERROR_LOG': 'anki_cards/errors.log',
+   'TRANSLATED_CACHE': 'anki_cards/translated_cache.json',
     
-    # Batch Settings (for current free API rate limits: 15 RPM, 1M TPM, 200 RPD)
-    'BATCH_SIZE': 20,
-    'DELAY_BETWEEN_BATCHES': 4.5,  # seconds
+   # Deck generation toggles
+   'CREATE_NATIVE_TO_FOREIGN': True,
+   'CREATE_FOREIGN_TO_NATIVE': True,
+   'CREATE_NATIVE_TO_NATIVE': True,
+   'CREATE_APKG': True,
     
-    # Output Options
-    'CREATE_NATIVE_TO_FOREIGN': True,  # Native → Foreign deck (e.g. DE → EN)
-    'CREATE_FOREIGN_TO_NATIVE': True,  # Foreign → Native deck (e.g. EN→ DE)
-    'CREATE_NATIVE_TO_NATIVE': True,  # Native → Native deck (monolingual)
-    'CREATE_APKG': True,            # Auto-create APKG packages
+   # Rate limits (align with current free tier: 15 RPM, 1M TPM, 200 RPD)
+   'BATCH_SIZE': 20,
+   'DELAY_BETWEEN_BATCHES': 4.5,
+   'MAX_RETRIES': 3,
+   'RETRY_DELAY': 10,
     
     # Debugging
-    'VERBOSE': False,               # Show detailed progress
-    'SAVE_RAW_RESPONSES': False,    # Save Gemini responses (debug)
-    'SAVE_RAW_INPUTS': False,       # Save prompts (debug)
+   'VERBOSE': True,
+   'DRY_RUN': False,
+   'SAVE_RAW_RESPONSES': False,
+   'SAVE_RAW_INPUTS': False,
 }
+
+For additional switches (e.g., caching, logging, dry runs) check the comments inside `kindle_to_anki/config.py`.
 ```
 
 ## 🎨 Card Design
@@ -339,10 +353,11 @@ Kindle-to-Anki/
 ├── CHANGELOG.md               # Versionshistorie und wichtige Änderungen (in der Zukunft)
 ├── README.md                  # Diese zweisprachige Anleitung
 ├── requirements.txt           # Abhängigkeitsliste für pip install
-├── kindle-to-anki.py          # Schlanke Hülle, ruft den Paket-Einstieg auf
-├── tsv_to_apkg.py             # Wandelt TSV-Exporte in APKG-Decks um
+├── kindle-to-anki.py          # Schlanker Wrapper, ruft den Paket-Einstieg auf
+├── tsv_to_apkg.py             # Wrapper, die vorhandene TSV-Exporte in APKG-Decks überführt
 ├── kindle_to_anki/            # Modulare Anwendung, die das CLI antreibt
 │   ├── __init__.py            # Paket-Metadaten (Version usw.)
+│   ├── apkg_builder.py        # Zentrale APKG-Erstellung inkl. Template-Lader
 │   ├── cache.py               # Lade-/Speicherfunktionen für den Übersetzungs-Cache
 │   ├── config.py              # Zentrale Laufzeitkonfiguration
 │   ├── database.py            # Zugriffshilfen auf die Kindle vocab.db
@@ -351,6 +366,7 @@ Kindle-to-Anki/
 │   ├── helpers.py             # Validierungs- und Sprachverarbeitungsfunktionen
 │   ├── main.py                # Orchestriert die ETL-Pipeline
 │   ├── normalization.py       # Lemmatisierungs- und Textbereinigungstools
+│   ├── templates/             # HTML/CSS-Kartenvorlagen für den APKG-Export
 │   └── utils.py               # Logging, Fortschritt und weitere Helfer
 ├── anki_cards/                # Generierte Artefakte und Logs
 │   ├── apkg_files/            # Fertige Anki-Decks zum Import
@@ -365,26 +381,36 @@ Bearbeite `kindle_to_anki/config.py` zum Anpassen:
 
 ```python
 CONFIG = {
-    # API & Pfade
-    'GEMINI_API_KEY': 'dein-api-key',
-    'VOCAB_DB_PATH': 'put_vocab_db_here/vocab.db',
-    'TSV_OUTPUT_DIR': 'anki_cards/tsv_files',
-    'APKG_OUTPUT_DIR': 'anki_cards/apkg_files',
-    
-    # Batch-Einstellungen (für aktuelle kostenlose API-Limits: 15 RPM, 1M TPM, 200 RPD)
-    'BATCH_SIZE': 20,
-    'DELAY_BETWEEN_BATCHES': 4.5,  # Sekunden
-    
-    # Ausgabe-Optionen
-    'CREATE_EN_DE_CARDS': True,     # Englisch → Deutsch
-    'CREATE_DE_EN_CARDS': True,     # Deutsch → Englisch
-    'CREATE_DE_DE_CARDS': True,     # Deutsch → Deutsch
-    'CREATE_APKG': True,            # APKG-Pakete automatisch erstellen
-    
-    # Debugging
-    'VERBOSE': False,               # Detaillierte Fortschrittsanzeige
-    'SAVE_RAW_RESPONSES': False,    # Gemini-Antworten speichern (Debug)
-    'SAVE_RAW_INPUTS': False,       # Prompts speichern (Debug)
+   # API & Sprachen
+   'GEMINI_API_KEY': 'dein-api-key',  # Erforderlicher Google-Gemini-Schlüssel
+   'SOURCE_LANGUAGE': 'de',           # Muttersprache für Prompts & Karten
+   'TARGET_LANGUAGE': 'en',           # Lernsprache
+
+   # Pfade
+   'VOCAB_DB_PATH': 'put_vocab_db_here/vocab.db',
+   'TSV_OUTPUT_DIR': 'anki_cards/tsv_files',
+   'APKG_OUTPUT_DIR': 'anki_cards/apkg_files',
+   'PROGRESS_FILE': 'anki_cards/progress.json',
+   'ERROR_LOG': 'anki_cards/errors.log',
+   'TRANSLATED_CACHE': 'anki_cards/translated_cache.json',
+
+   # Deck-Optionen
+   'CREATE_NATIVE_TO_FOREIGN': True,
+   'CREATE_FOREIGN_TO_NATIVE': True,
+   'CREATE_NATIVE_TO_NATIVE': True,
+   'CREATE_APKG': True,
+
+   # Rate-Limits (aktuelle Free-Tier-Grenzen: 15 RPM, 1M TPM, 200 RPD)
+   'BATCH_SIZE': 20,
+   'DELAY_BETWEEN_BATCHES': 4.5,
+   'MAX_RETRIES': 3,
+   'RETRY_DELAY': 10,
+
+   # Debugging
+   'VERBOSE': True,
+   'DRY_RUN': False,
+   'SAVE_RAW_RESPONSES': False,
+   'SAVE_RAW_INPUTS': False,
 }
 ```
 

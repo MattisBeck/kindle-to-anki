@@ -1,0 +1,17 @@
+/* === Antwort (Rückseite) - TÜRKIS === */
+.answer {
+  margin: 1.5rem 0;
+  padding: 1rem 1.5rem;
+  background-color: #f0fdfa;
+  border-left: 4px solid #14b8a6;
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 600;
+  color: #115e59;
+}
+
+.night_mode .answer,
+.nightMode .answer {
+  background-color: #1e3a38;
+  border-left-color: #5eead4;
+  color: #99f6e4;
+}

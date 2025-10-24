@@ -1,0 +1,17 @@
+/* === Antwort (Rückseite) - ROT === */
+.answer {
+  margin: 1.5rem 0;
+  padding: 1rem 1.5rem;
+  background-color: #fef2f2;
+  border-left: 4px solid #ef4444;
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 600;
+  color: #991b1b;
+}
+
+.night_mode .answer,
+.nightMode .answer {
+  background-color: #3a1e1e;
+  border-left-color: #f87171;
+  color: #fca5a5;
+}

@@ -1,0 +1,15 @@
+<div class="card">
+  {{{{#Book}}}}
+  <div class="source">📚 {{{{Book}}}}</div>
+  {{{{/Book}}}}
+  
+  <div class="type">{type_label}</div>
+  <div class="question">{{{{{target_lemma}}}}}</div>
+  
+  {{{{#Context_HTML}}}}
+  <div class="context">
+    <div class="context-label">Kontext:</div>
+    {{{{Context_HTML}}}}
+  </div>
+  {{{{/Context_HTML}}}}
+</div>

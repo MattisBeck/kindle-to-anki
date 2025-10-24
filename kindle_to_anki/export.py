@@ -176,7 +176,7 @@ def create_all_tsv_files(foreign_cards: List[Dict], native_cards: List[Dict],
 
 def export_to_apkg(tsv_dir: str, apkg_dir: str, verbose: bool = False):
     """
-    Convert all TSV files to APKG format using tsv_to_apkg.py
+    Convert all TSV files to APKG format using apkg_builder module
     
     Args:
         tsv_dir: Directory containing TSV files
@@ -184,18 +184,10 @@ def export_to_apkg(tsv_dir: str, apkg_dir: str, verbose: bool = False):
         verbose: Enable verbose output
     """
     try:
-        # Import the converter module
-        import sys
         from pathlib import Path
+        from .apkg_builder import convert_all_tsv_to_apkg
         
-        # Add parent directory to path
-        script_dir = Path(__file__).parent.parent
-        if str(script_dir) not in sys.path:
-            sys.path.insert(0, str(script_dir))
-        
-        from tsv_to_apkg import convert_all_tsv_to_apkg
-        
-        # Convert all TSV files (without verbose parameter)
+        # Convert all TSV files
         if verbose:
             print("\n📦 Converting TSV to APKG...")
         
@@ -206,7 +198,7 @@ def export_to_apkg(tsv_dir: str, apkg_dir: str, verbose: bool = False):
     
     except ImportError as e:
         if verbose:
-            print(f"⚠️  APKG export skipped: tsv_to_apkg.py not found ({e})")
+            print(f"⚠️  APKG export skipped: apkg_builder module not found ({e})")
     except Exception as e:
         if verbose:
             print(f"❌ APKG export failed: {e}")

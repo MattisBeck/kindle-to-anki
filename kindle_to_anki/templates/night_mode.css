@@ -1,0 +1,60 @@
+/* === Night Mode === */
+.night_mode .card,
+.nightMode .card {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+.night_mode .type,
+.nightMode .type {
+  color: #999;
+}
+
+.night_mode .question,
+.nightMode .question {
+  color: #ffffff;
+}
+
+.night_mode .hint,
+.nightMode .hint {
+  background-color: #2a2a2a;
+  border-left-color: #666;
+  color: #b0b0b0;
+}
+
+.night_mode hr,
+.nightMode hr {
+  border-top-color: #404040;
+}
+
+.night_mode .definition,
+.nightMode .definition {
+  background-color: #3a2e1e;
+  border-left-color: #fbbf24;
+  color: #fcd34d;
+}
+
+.night_mode .context,
+.nightMode .context {
+  background-color: #2a2a2a;
+  border-color: #404040;
+  color: #b0b0b0;
+}
+
+.night_mode .context b,
+.nightMode .context b {
+  color: #93c5fd;
+  background-color: #1e3a5f;
+}
+
+.night_mode .notes,
+.nightMode .notes {
+  background-color: #3a2e1e;
+  border-left-color: #fbbf24;
+  color: #fcd34d;
+}
+
+.night_mode .source,
+.nightMode .source {
+  color: #999;
+}
