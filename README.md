@@ -43,15 +43,29 @@ Great for learning a new language and even improving your own!
    - Go to https://aistudio.google.com/apikey
    - Create your free API Key
 
-4. **Add your Gemini API Key** in `kindle_to_anki/config.py`:
+4. **Configure API Key** (choose one method):
+
+   **Option A: Environment Variable (Recommended)**
+   ```bash
+   # Add to ~/.zshrc (macOS) or ~/.bashrc (Linux)
+   export GEMINI_API_KEY="your-api-key-here"
+   
+   # Reload shell configuration
+   source ~/.zshrc  # or source ~/.bashrc
+   ```
+
+   **Option B: Config File**
    ```python
+   # Edit kindle_to_anki/config.py
    CONFIG = {
-       'GEMINI_API_KEY': 'YOUR-API-KEY-HERE',
+       'GEMINI_API_KEY': 'your-api-key-here',
        'SOURCE_LANGUAGE': 'de',  # Your native language
        'TARGET_LANGUAGE': 'en',  # Language you're learning
        ...
    }
    ```
+   
+   > 💡 **Priority**: The script checks the environment variable first, then falls back to the config file.
 
 5. **Copy Kindle Database**:
    - Copy `vocab.db` from your Kindle to `put_vocab_db_here/` folder
@@ -324,15 +338,29 @@ Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigen
    - Gehe zu https://aistudio.google.com/apikey
    - Erstelle deinen kostenlosen API Key
 
-4. **API Key eintragen** in `kindle_to_anki/config.py`:
+4. **API Key konfigurieren** (wähle eine Methode):
+
+   **Option A: Umgebungsvariable (Empfohlen)**
+   ```bash
+   # Füge zu ~/.zshrc (macOS) oder ~/.bashrc (Linux) hinzu
+   export GEMINI_API_KEY="dein-api-key-hier"
+   
+   # Shell-Konfiguration neu laden
+   source ~/.zshrc  # oder source ~/.bashrc
+   ```
+
+   **Option B: Config-Datei**
    ```python
+   # Bearbeite kindle_to_anki/config.py
    CONFIG = {
-       'GEMINI_API_KEY': 'DEIN-API-KEY-HIER',
+       'GEMINI_API_KEY': 'dein-api-key-hier',
        'SOURCE_LANGUAGE': 'de',  # Deine Muttersprache
        'TARGET_LANGUAGE': 'en',  # Sprache, die du lernst
        ...
    }
    ```
+   
+   > 💡 **Priorität**: Das Skript prüft zuerst die Umgebungsvariable, dann die Config-Datei.
 
 5. **Kindle-Datenbank kopieren**:
    - Kopiere `vocab.db` von deinem Kindle in den Ordner `put_vocab_db_here/`

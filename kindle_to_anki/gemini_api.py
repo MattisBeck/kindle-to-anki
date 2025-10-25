@@ -2,6 +2,7 @@
 Gemini API integration for translations and definitions
 """
 
+import os
 import re
 import json
 import time
@@ -10,6 +11,25 @@ from typing import Dict, List, Optional
 
 from .config import CONFIG
 from .helpers import build_field_key, get_language_meta
+
+
+def get_api_key() -> str:
+    """
+    Get Gemini API key with fallback logic:
+    1. First check environment variable GEMINI_API_KEY
+    2. Then check CONFIG['GEMINI_API_KEY']
+    
+    Returns:
+        API key string (empty if not found)
+    """
+    # Priority 1: Environment variable
+    env_key = os.getenv('GEMINI_API_KEY', '').strip()
+    if env_key:
+        return env_key
+    
+    # Priority 2: Config file
+    config_key = CONFIG.get('GEMINI_API_KEY', '').strip()
+    return config_key
 
 
 def make_context_html(usage: str, original_word: str, use_cloze: bool = False) -> str:

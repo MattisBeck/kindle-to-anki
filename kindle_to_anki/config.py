@@ -1,9 +1,13 @@
 """
 Configuration settings for Kindle to Anki converter
 """
+
 CONFIG = {
-    # Gemini API Key (required)
-    'GEMINI_API_KEY': '', 
+    # Gemini API Key (optional here - use environment variable or set directly)
+    # Priority: 1) Environment variable GEMINI_API_KEY, 2) This field
+    # To use environment variable: export GEMINI_API_KEY="your-key" (in ~/.zshrc or ~/.bashrc)
+    # To use config file: Replace empty string below with 'your-api-key-here'
+    'GEMINI_API_KEY': '',
     
     # Language configuration
     # SOURCE_LANGUAGE = Native language (cards & prompts default to this language)

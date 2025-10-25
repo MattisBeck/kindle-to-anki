@@ -16,7 +16,7 @@ from .helpers import (
 )
 from .database import connect_to_db, get_vocabulary_data, filter_vocabulary_by_language
 from .normalization import lemmatize_word, normalize_book_title, load_book_titles_from_cache
-from .gemini_api import setup_gemini_api, process_batch_with_gemini
+from .gemini_api import setup_gemini_api, process_batch_with_gemini, get_api_key
 from .cache import (
     add_to_cache,
     get_cache_stats,
@@ -282,7 +282,8 @@ def main():
         print()
     else:
         print("🤖 Initializing Gemini API...")
-        genai = setup_gemini_api(CONFIG['GEMINI_API_KEY'], verbose=verbose)
+        api_key = get_api_key()
+        genai = setup_gemini_api(api_key, verbose=verbose)
         if not genai:
             print("❌ Failed to initialize Gemini API")
             return
