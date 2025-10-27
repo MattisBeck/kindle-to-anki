@@ -9,3 +9,4 @@ kindle_to_anki/__pycache__
 .DS_Store
 .env
 TODO.md
+.tmp/

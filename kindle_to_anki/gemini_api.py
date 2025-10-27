@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 
 from .config import CONFIG
 from .helpers import build_field_key, get_language_meta
+from .notes import build_notes_line, extract_notes_metadata
 
 
 def get_api_key() -> str:
@@ -122,7 +123,17 @@ def create_prompt_for_batch(words_batch: List[Dict], word_language: str,
             f"- {definition_field}: {target_meta['german_name']}e Definition (erst die im Kontext verwendete Bedeutung, danach "
             "optionale weitere häufige Bedeutung mit 'also:').",
             f"- {gloss_field}: {native_meta['german_name']}e Übersetzung, die zum Kontext passt (Verben im Infinitiv, Nomen groß, mehrere Bedeutungen mit Komma).",
-            f"- Notes: Nur wenn WIRKLICH hilfreich. Schreibe die Notes in {native_meta['german_name']} (Register, Varianten, Falsche Freunde, Formen, Tonalität, Fremdwörter erklären).",
+            "- METADATEN: Liefere die Signale für Notes ausschließlich über die folgenden Schlüssel (falls nicht relevant, sinnvoll auf 'low' bzw. leer setzen):",
+            "  - notes: kurzer Hinweis in Muttersprache, nur wenn nötig",
+            "  - ambiguity: low/medium/high (immer setzen!)",
+            "  - sense: Kontext-Lesart (nur bei medium/high)",
+            "  - domain: Fachgebiet (z. B. 'jur.', 'IT'; bei Allgemeinsprache weglassen)",
+            "  - alternatives: Liste mit bis zu drei sinnvollen Alternativen",
+            "  - register: Stil (z. B. 'ugs.', 'formell'; bei neutral leer lassen)",
+            "  - false_friend: false bzw. kurzer String, wenn Stolperstein",
+            "  - collocations: Liste (max. zwei typische Kollokationen)",
+            "  - anchor: exakte Teilphrase (<=5 Wörter) aus dem Kontext",
+            "  - confidence: Zahl zwischen 0 und 1",
             "",
             "⚠️ KONTEXT LESEN! Bedeutung muss zum Satz passen, Tonalität berücksichtigen.",
             f"⚠️ WICHTIG: Original_word, {lemma_field}, Context_HTML und Book NICHT ausgeben – das übernimmt der Code automatisch.",
@@ -132,7 +143,17 @@ def create_prompt_for_batch(words_batch: List[Dict], word_language: str,
         prompt_lines.extend([
             "AUFGABE: Gib für jede Vokabel NUR zurück:",
             f"- {definition_field}: {native_meta['german_name']}e Definition in einfachen Worten (erst Kontext-Bedeutung, danach optionale häufige Bedeutung mit 'auch:').",
-            f"- Notes: Nur wenn hilfreich. Schreibe Notes in {native_meta['german_name']} (Register, Varianten, Falsche Freunde, Fremdwörter erklären, Tonalität).",
+            "- METADATEN: Verwende exakt die folgenden Schlüssel, um Hinweise für Notes zu liefern (Ambiguität immer angeben, Rest nur bei Bedarf):",
+            "  - notes: kurzer Hinweis in Muttersprache",
+            "  - ambiguity: low/medium/high",
+            "  - sense: Kontext-Lesart (bei medium/high)",
+            "  - domain: Fachgebiet (z. B. 'medizin', 'IT')",
+            "  - alternatives: Liste mit bis zu drei Alternativen",
+            "  - register: Stilhinweis (z. B. 'ugs.', 'formell')",
+            "  - false_friend: false oder String mit Warnung",
+            "  - collocations: Liste mit 0-2 Kollokationen",
+            "  - anchor: Teilphrase aus dem Kontext",
+            "  - confidence: Zahl 0-1",
             "",
             "⚠️ KONTEXT LESEN! Bedeutung muss zum Satz passen, Tonalität berücksichtigen.",
             f"⚠️ WICHTIG: Original_word, {lemma_field}, Context_HTML und Book NICHT ausgeben – das übernimmt der Code automatisch.",
@@ -167,11 +188,11 @@ def create_prompt_for_batch(words_batch: List[Dict], word_language: str,
 
     if word_language == target_language:
         prompt_output.append(
-            f"\n[\n  {{\n    \"{definition_field}\": \"Definition Beispiel\",\n    \"{gloss_field}\": \"Übersetzung Beispiel\",\n    \"Notes\": \"optional in {native_meta['german_name']}\"\n  }},\n  {{\n    \"{definition_field}\": \"weitere Bedeutung (also: ... )\",\n    \"{gloss_field}\": \"alternative Übersetzung\",\n    \"Notes\": \"\"\n  }}\n]\n"
+            f"""\n[\n  {{\n    \"{definition_field}\": \"Definition Beispiel\",\n    \"{gloss_field}\": \"Übersetzung Beispiel\",\n    \"notes\": \"kurzer Hinweis\",\n    \"ambiguity\": \"medium\",\n    \"sense\": \"Artikel/Publikation\",\n    \"domain\": \"jur.\",\n    \"alternatives\": [\"Artikel\", \"Bericht\"],\n    \"register\": \"formell\",\n    \"false_friend\": \"eventuell != eventually\",\n    \"collocations\": [\"to publish an article\"],\n    \"anchor\": \"the article\",\n    \"confidence\": 0.82\n  }}\n]\n"""
         )
     else:
         prompt_output.append(
-            f"\n[\n  {{\n    \"{definition_field}\": \"Definition Beispiel\",\n    \"Notes\": \"Register-Hinweis in {native_meta['german_name']}\"\n  }},\n  {{\n    \"{definition_field}\": \"weitere Bedeutung (auch: ... )\",\n    \"Notes\": \"\"\n  }}\n]\n"
+            f"""\n[\n  {{\n    \"{definition_field}\": \"Definition Beispiel\",\n    \"notes\": \"Register: ugs.\",\n    \"ambiguity\": \"low\",\n    \"alternatives\": [\"Beispiel\", \"Beleg\"],\n    \"register\": \"ugs.\",\n    \"anchor\": \"dieses Beispiel\",\n    \"confidence\": 0.73\n  }}\n]\n"""
         )
 
     return "\n".join(prompt_lines) + "".join(prompt_words) + "\n".join(prompt_output)
@@ -283,7 +304,12 @@ def process_batch_with_gemini(words_batch: List[Dict], language: str,
                         
                         # Extract translation/definition
                         definition = gemini_result.get(definition_key, '') or ''
-                        notes_value = gemini_result.get('Notes', '') or ''
+                        metadata = extract_notes_metadata(gemini_result)
+                        notes_value = build_notes_line(metadata)
+                        if not notes_value:
+                            legacy_notes = gemini_result.get('Notes') or gemini_result.get('notes')
+                            if isinstance(legacy_notes, str):
+                                notes_value = legacy_notes
                         translation = ''
                         if language == target_language:
                             translation = gemini_result.get(gloss_key, '') or ''
@@ -298,6 +324,9 @@ def process_batch_with_gemini(words_batch: List[Dict], language: str,
                             'Book': word_data.get('book', 'Unknown'),
                         }
 
+                        if metadata:
+                            card['Notes_metadata'] = metadata
+                        
                         if language == target_language:
                             card[gloss_key] = translation
                         
