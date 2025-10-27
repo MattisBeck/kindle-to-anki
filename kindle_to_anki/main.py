@@ -43,11 +43,12 @@ def load_spacy_models(languages: Sequence[str], verbose: bool = False):
 
     try:
         import spacy  # type: ignore
-    except ImportError:
+    except ImportError as exc:
         SPACY_IMPORT_FAILED = True
-        print("  ⚠️  spaCy not installed! Lemmatization will fall back to lowercase only.")
-        print("     Install with: pip install spacy")
-        return
+        raise RuntimeError("spaCy is required for lemmatization. Install it with: pip install spacy") from exc
+
+    missing_models = []
+    missing_config = []
 
     for lang in normalized_languages:
         if lang in NLP_MODELS:
@@ -55,8 +56,7 @@ def load_spacy_models(languages: Sequence[str], verbose: bool = False):
 
         model_name = SPACY_MODELS.get(lang)
         if not model_name:
-            print(f"  ⚠️  No spaCy model configured for '{lang}'.")
-            NLP_MODELS[lang] = None
+            missing_config.append(lang)
             continue
 
         try:
@@ -64,10 +64,22 @@ def load_spacy_models(languages: Sequence[str], verbose: bool = False):
                 print(f"  📚 Loading spaCy model: {model_name}")
             NLP_MODELS[lang] = spacy.load(model_name)
         except OSError:
-            NLP_MODELS[lang] = None
-            # Always show error messages for missing models (critical info!)
-            print(f"  ⚠️  spaCy model '{model_name}' not found!")
-            print(f"     Install with: python -m spacy download {model_name}")
+            missing_models.append(model_name)
+
+    error_messages: List[str] = []
+    if missing_config:
+        langs = ", ".join(sorted(set(missing_config)))
+        error_messages.append(
+            f"No spaCy model configured for: {langs}. Check supported languages in config."
+        )
+    if missing_models:
+        installs = "\n".join(
+            f"  • python -m spacy download {model}" for model in sorted(set(missing_models))
+        )
+        error_messages.append("Missing spaCy models:\n" + installs)
+
+    if error_messages:
+        raise RuntimeError("\n".join(error_messages))
 
 
 def process_language_batch(words: List[Dict], language: str,
@@ -244,7 +256,11 @@ def main():
     if languages_to_load:
         if verbose:
             print("📚 Loading NLP models...")
-        load_spacy_models(languages_to_load, verbose=verbose)
+        try:
+            load_spacy_models(languages_to_load, verbose=verbose)
+        except RuntimeError as error:
+            print(f"❌ {error}")
+            return
         if verbose:
             print()
 
