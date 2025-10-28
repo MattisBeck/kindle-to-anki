@@ -23,6 +23,44 @@ NEUTRAL_REGISTERS: Sequence[str] = (
     "formell-neutral",
 )
 
+LABELS_BY_LANGUAGE: Dict[str, Dict[str, str]] = {
+    "de": {
+        "false_friend": "False Friend",
+        "false_friend_hint": "False Friend beachten",
+        "sense": "Sinn",
+        "register": "Register",
+        "alternatives": "Alternativen",
+    },
+    "en": {
+        "false_friend": "False friend",
+        "false_friend_hint": "Watch the false friend",
+        "sense": "Sense",
+        "register": "Register",
+        "alternatives": "Alternatives",
+    },
+    "fr": {
+        "false_friend": "Faux ami",
+        "false_friend_hint": "Attention faux ami",
+        "sense": "Sens",
+        "register": "Registre",
+        "alternatives": "Alternatives",
+    },
+    "es": {
+        "false_friend": "Falso amigo",
+        "false_friend_hint": "Ojo falso amigo",
+        "sense": "Sentido",
+        "register": "Registro",
+        "alternatives": "Alternativas",
+    },
+    "pl": {
+        "false_friend": "Falszywy przyjaciel",
+        "false_friend_hint": "Uwaga falszywy przyjaciel",
+        "sense": "Sens",
+        "register": "Rejestr",
+        "alternatives": "Alternatywy",
+    },
+}
+
 
 def _to_string(value: Any) -> str:
     """Return a trimmed string representation or an empty string."""
@@ -147,7 +185,11 @@ def extract_notes_metadata(raw: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def build_notes_line(
-    metadata: Dict[str, Any], *, separator: str = " · ", max_length: int = 300
+    metadata: Dict[str, Any],
+    *,
+    separator: str = " · ",
+    max_length: int = 300,
+    native_language: str = "de",
 ) -> str:
     """
     Deterministically build a concise Notes string from metadata signals.
@@ -165,6 +207,9 @@ def build_notes_line(
     if not metadata:
         return ""
 
+    native_language = (native_language or "de").lower()
+    labels = LABELS_BY_LANGUAGE.get(native_language, LABELS_BY_LANGUAGE["de"])
+
     components: List[str] = []
 
     def try_add(fragment: Optional[str]) -> None:
@@ -177,9 +222,9 @@ def build_notes_line(
 
     false_friend = metadata.get("false_friend")
     if isinstance(false_friend, str):
-        try_add(f"False Friend: {false_friend}")
+        try_add(f"{labels['false_friend']}: {false_friend}")
     elif isinstance(false_friend, bool) and false_friend:
-        try_add("False Friend beachten")
+        try_add(labels["false_friend_hint"])
 
     try_add(metadata.get("notes"))
 
@@ -187,7 +232,7 @@ def build_notes_line(
     if ambiguity in {"medium", "hoch", "high"}:
         sense = metadata.get("sense")
         if sense:
-            try_add(f"Sinn: {_to_string(sense)}")
+            try_add(f"{labels['sense']}: {_to_string(sense)}")
 
     domain = _to_string(metadata.get("domain"))
     if domain and domain.lower() not in GENERIC_DOMAIN_TOKENS:
@@ -195,13 +240,13 @@ def build_notes_line(
 
     register = _to_string(metadata.get("register"))
     if register and register.lower() not in NEUTRAL_REGISTERS:
-        try_add(f"Register: {register}")
+        try_add(f"{labels['register']}: {register}")
 
     alternatives = metadata.get("alternatives") or []
     if isinstance(alternatives, (list, tuple)):
         formatted = ", ".join(_dedupe_preserve_order(_to_string(item) for item in alternatives if _to_string(item)))
         if formatted:
-            try_add(f"Alternativen: {formatted}")
+            try_add(f"{labels['alternatives']}: {formatted}")
 
     collocations = metadata.get("collocations") or []
     if isinstance(collocations, (list, tuple)):

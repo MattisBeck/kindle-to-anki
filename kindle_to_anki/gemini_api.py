@@ -305,7 +305,10 @@ def process_batch_with_gemini(words_batch: List[Dict], language: str,
                         # Extract translation/definition
                         definition = gemini_result.get(definition_key, '') or ''
                         metadata = extract_notes_metadata(gemini_result)
-                        notes_value = build_notes_line(metadata)
+                        notes_value = build_notes_line(
+                            metadata,
+                            native_language=native_language,
+                        )
                         if not notes_value:
                             legacy_notes = gemini_result.get('Notes') or gemini_result.get('notes')
                             if isinstance(legacy_notes, str):
