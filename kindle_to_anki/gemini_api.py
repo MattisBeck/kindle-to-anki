@@ -13,17 +13,27 @@ from .config import CONFIG
 from .helpers import build_field_key, get_language_meta
 from .notes import build_notes_line, extract_notes_metadata
 
+# Try to load .env file if python-dotenv is available
+try:
+    from dotenv import load_dotenv
+    # Load .env from project root (parent of kindle_to_anki package)
+    env_path = Path(__file__).parent.parent / '.env'
+    load_dotenv(dotenv_path=env_path)
+except ImportError:
+    # python-dotenv not installed, skip
+    pass
+
 
 def get_api_key() -> str:
     """
     Get Gemini API key with fallback logic:
-    1. First check environment variable GEMINI_API_KEY
+    1. First check .env file / environment variable GEMINI_API_KEY
     2. Then check CONFIG['GEMINI_API_KEY']
     
     Returns:
         API key string (empty if not found)
     """
-    # Priority 1: Environment variable
+    # Priority 1: Environment variable (includes .env if loaded above)
     env_key = os.getenv('GEMINI_API_KEY', '').strip()
     if env_key:
         return env_key

@@ -39,14 +39,41 @@ def validate_language_configuration():
     return native, target
 
 
+import os
+from pathlib import Path
+from .config import CONFIG
+
+# Try to load .env file if python-dotenv is available
+try:
+    from dotenv import load_dotenv
+    # Load .env from project root (parent of kindle_to_anki package)
+    env_path = Path(__file__).parent.parent / '.env'
+    load_dotenv(dotenv_path=env_path)
+except ImportError:
+    # python-dotenv not installed, skip
+    pass
+
+
 def validate_api_key():
-    """Validate that GEMINI_API_KEY is set and has correct format."""
-    api_key = CONFIG.get('GEMINI_API_KEY', '').strip()
+    """
+    Validate that GEMINI_API_KEY is set and has correct format.
+    Checks in this order:
+    1. Environment variable GEMINI_API_KEY
+    2. .env file (if python-dotenv installed)
+    3. CONFIG['GEMINI_API_KEY']
+    """
+    # Priority 1: Environment variable (includes .env if loaded above)
+    api_key = os.getenv('GEMINI_API_KEY', '').strip()
+    
+    # Priority 2: Config file
+    if not api_key:
+        api_key = CONFIG.get('GEMINI_API_KEY', '').strip()
     
     if not api_key:
         raise ValueError(
             "❌ GEMINI_API_KEY is empty!\n"
-            "   Please add your API key in kindle_to_anki/config.py\n"
+            "   Option A: Create .env file: cp .env.example .env (then edit it)\n"
+            "   Option B: Add your API key in kindle_to_anki/config.py\n"
             "   Get a free key at: https://aistudio.google.com/apikey"
         )
     

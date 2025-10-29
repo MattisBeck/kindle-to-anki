@@ -45,13 +45,13 @@ Great for learning a new language and even improving your own!
 
 4. **Configure API Key** (choose one method):
 
-   **Option A: Environment Variable (Recommended)**
+   **Option A: .env File (Recommended)**
    ```bash
-   # Add to ~/.zshrc (macOS) or ~/.bashrc (Linux)
-   export GEMINI_API_KEY="your-api-key-here"
+   # Copy the example file
+   cp .env.example .env
    
-   # Reload shell configuration
-   source ~/.zshrc  # or source ~/.bashrc
+   # Edit .env and add your API key
+   # GEMINI_API_KEY=your-api-key-here
    ```
 
    **Option B: Config File**
@@ -65,7 +65,7 @@ Great for learning a new language and even improving your own!
    }
    ```
    
-   > 💡 **Priority**: The script checks the environment variable first, then falls back to the config file.
+   > 💡 **Priority**: The script checks the .env file first, then falls back to the config file.
 
 5. **Copy Kindle Database**:
    - Copy `vocab.db` from your Kindle to `put_vocab_db_here/` folder
@@ -340,13 +340,13 @@ Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigen
 
 4. **API Key konfigurieren** (wähle eine Methode):
 
-   **Option A: Umgebungsvariable (Empfohlen)**
+   **Option A: .env Datei (Empfohlen)**
    ```bash
-   # Füge zu ~/.zshrc (macOS) oder ~/.bashrc (Linux) hinzu
-   export GEMINI_API_KEY="dein-api-key-hier"
+   # Kopiere die Beispieldatei
+   cp .env.example .env
    
-   # Shell-Konfiguration neu laden
-   source ~/.zshrc  # oder source ~/.bashrc
+   # Bearbeite .env und füge deinen API Key hinzu
+   # GEMINI_API_KEY=dein-api-key-hier
    ```
 
    **Option B: Config-Datei**
@@ -360,7 +360,7 @@ Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigen
    }
    ```
    
-   > 💡 **Priorität**: Das Skript prüft zuerst die Umgebungsvariable, dann die Config-Datei.
+   > 💡 **Priorität**: Das Skript prüft zuerst die .env Datei, dann die Config-Datei.
 
 5. **Kindle-Datenbank kopieren**:
    - Kopiere `vocab.db` von deinem Kindle in den Ordner `put_vocab_db_here/`

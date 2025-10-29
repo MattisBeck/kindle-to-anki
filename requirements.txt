@@ -2,3 +2,4 @@ google
 genanki
 spacy
 google-generativeai
+python-dotenv
