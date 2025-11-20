@@ -8,7 +8,7 @@
 A simple python script which converts your Kindle's vocab.db files to context based flashcards via Gemini (you can get a free api key, these limits are enough).
 Great for learning a new language and even improving your own!
 
-## 🎯 Features
+## Features
 
 - **Automatic Lemmatization** with spaCy
 - **AI-Generated Definitions** via Gemini 2.0 Flash
@@ -19,7 +19,7 @@ Great for learning a new language and even improving your own!
 - **Night Mode Support**
 - **Responsive Design** - so you can learn on all your devices
 
-## 📖 Quick Start
+## Quick Start
 
 1. **Clone Repository & Create Virtual Environment**:
    ```bash
@@ -37,7 +37,7 @@ Great for learning a new language and even improving your own!
    pip install -r requirements.txt
    ```
    
-   > 💡 **Note**: The script will automatically tell you which spaCy language models you need to install based on your configured languages. Just run the script first, and it will guide you!
+   > **Note**: The script will automatically tell you which spaCy language models you need to install based on your configured languages. Just run the script first, and it will guide you!
 
 3. **Get your free Gemini API Key**:
    - Go to https://aistudio.google.com/apikey
@@ -65,7 +65,7 @@ Great for learning a new language and even improving your own!
    }
    ```
    
-   > 💡 **Priority**: The script checks the .env file first, then falls back to the config file.
+   > **Priority**: The script checks the .env file first, then falls back to the config file.
 
 5. **Copy Kindle Database**:
    - Copy `vocab.db` from your Kindle to `put_vocab_db_here/` folder
@@ -79,7 +79,7 @@ Great for learning a new language and even improving your own!
    - Open Anki → File → Import
    - Select `anki_cards/apkg_files/anki_*.apkg`
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 Kindle-to-Anki/
@@ -108,7 +108,7 @@ Kindle-to-Anki/
 └── put_vocab_db_here/         # Drop your Kindle vocab.db before running
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 Edit `kindle_to_anki/config.py` to customize:
 
@@ -149,7 +149,7 @@ CONFIG = {
 For additional switches (e.g., caching, logging, dry runs) check the comments inside `kindle_to_anki/config.py`.
 ```
 
-## 🎨 Card Design
+## Card Design
 
 ### L2→L1 Cards (Blue Theme)
 - **Front**: L2 word + context
@@ -164,13 +164,13 @@ For additional switches (e.g., caching, logging, dry runs) check the comments in
 - **Back**: L1 definition + notes
 
 **All cards include:**
-- 📚 Source book
-- 📝 Context sentence (word highlighted or hidden)
-- 💡 Linguistic notes (register, phrasal verbs, idioms, etc.)
-- 🌙 Night mode support
-- 📱 Responsive design
+- Source book
+- Context sentence (word highlighted or hidden)
+- Linguistic notes (register, phrasal verbs, idioms, etc.)
+- Night mode support
+- Responsive design
 
-### 📸 Card Examples
+### Card Examples
 
 <div align="center">
 
@@ -185,7 +185,7 @@ For additional switches (e.g., caching, logging, dry runs) check the comments in
 
 </div>
 
-## 🔄 Workflow
+## Workflow
 
 ```mermaid
 graph LR
@@ -204,17 +204,17 @@ graph LR
 - Python adds: `Original_word`, `Lemma`, `Context_HTML`, `Book`
 - **Savings**: ~59% fewer output tokens
 
-## 🌍 Supported Languages
+## Supported Languages
 
 The converter currently supports the following languages:
 
 | Language | Code | spaCy Model | Status |
 |----------|------|-------------|--------|
-| 🇩🇪 German (Deutsch) | `de` | `de_core_news_sm` | ✅ Full support |
-| 🇬🇧 English | `en` | `en_core_web_sm` | ✅ Full support |
-| 🇪🇸 Spanish (Español) | `es` | `es_core_news_sm` | ✅ Full support |
-| 🇫🇷 French (Français) | `fr` | `fr_core_news_sm` | ✅ Full support |
-| 🇵🇱 Polish (Polski) | `pl` | `pl_core_news_sm` | ✅ Full support |
+| 🇩🇪 German (Deutsch) | `de` | `de_core_news_sm` | Full support |
+| 🇬🇧 English | `en` | `en_core_web_sm` | Full support |
+| 🇪🇸 Spanish (Español) | `es` | `es_core_news_sm` | Full support |
+| 🇫🇷 French (Français) | `fr` | `fr_core_news_sm` | Full support |
+| 🇵🇱 Polish (Polski) | `pl` | `pl_core_news_sm` | Full support |
 
 **Configure your language pair** in `kindle_to_anki/config.py`:
 ```python
@@ -225,11 +225,11 @@ CONFIG = {
 }
 ```
 
-> 💡 **The script will automatically detect which spaCy models you need!** When you run the script, it will tell you exactly which models to install if they're missing.
+> **The script will automatically detect which spaCy models you need!** When you run the script, it will tell you exactly which models to install if they're missing.
 
 **Missing your language?** [Open an issue on GitHub](https://github.com/MattisBeck/kindle-to-anki/issues) and request support for your language!
 
-## 📊 Example Output
+## Example Output
 
 **Sample run (360 EN + 528 DE words):**
 ```
@@ -242,7 +242,7 @@ CONFIG = {
 ✅ APKG created: anki_de_de.apkg (528 cards)
 ```
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### spaCy Models Missing
 The script will tell you which models you need. Simply run the command it suggests, for example:
@@ -260,7 +260,7 @@ python -m spacy download en_core_web_sm
 pip install genanki
 ```
 
-## 💡 Tips
+## Tips
 
 1. **Use Cache**: On subsequent runs, only new vocabulary is translated
 2. **Adjust Batch Size**: Smaller batches = better quality, slower processing
@@ -271,7 +271,7 @@ pip install genanki
    ```
 5. **Book Title Normalization**: Titles are automatically normalized for consistency
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please:
 1. Fork the repository
@@ -279,11 +279,11 @@ Contributions are welcome! Please:
 3. Make your changes
 4. Submit a pull request
 
-## 📝 License
+## License
 
 MIT License - Free for private and commercial use.
 
-## 🙏 Credits
+## Credits
 - **Anki** - thank you, without you, I wouldn't be so good at school
 - **GitHub Student Devloper Pack** - without GitHub Copilot, I couldn't have done this project
 - **Gemini 2.0 Flash** (Google) - AI-generated definitions
@@ -291,7 +291,7 @@ MIT License - Free for private and commercial use.
 - **genanki** - APKG package generation
 ---
 
-Have Fun! 🎉
+Have Fun!
 
 ---
 > Gefällt dir das Projekt? **Gib ihm ein ⭐️ auf GitHub** – das hilft Sichtbarkeit & Weiterentwicklung enorm.
@@ -303,7 +303,7 @@ Have Fun! 🎉
 Ein einfaches Python-Skript, das deine Kindle-vocab.db in kontextbasierte Karteikarten via Gemini umwandelt (kostenloser API-Key verfügbar, Limits reichen meiner Meinung nach aus).
 Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigenen!
 
-## 🎯 Funktionen
+## Funktionen
 
 - **Automatische Lemmatisierung** mit spaCy
 - **KI-generierte Definitionen** via Gemini 2.0 Flash
@@ -314,7 +314,7 @@ Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigen
 - **Night Mode Support**
 - **Responsive Design** - lerne auf allen deinen Geräten
 
-## 📖 Schnellstart
+## Schnellstart
 
 1. **Repository klonen & Virtual Environment erstellen**:
    ```bash
@@ -332,7 +332,7 @@ Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigen
    pip install -r requirements.txt
    ```
    
-   > 💡 **Hinweis**: Das Skript sagt dir automatisch, welche spaCy-Sprachmodelle du installieren musst, basierend auf deinen konfigurierten Sprachen. Führe einfach das Skript aus, es wird dich anleiten!
+   > **Hinweis**: Das Skript sagt dir automatisch, welche spaCy-Sprachmodelle du installieren musst, basierend auf deinen konfigurierten Sprachen. Führe einfach das Skript aus, es wird dich anleiten!
 
 3. **Kostenlosen Gemini API Key holen**:
    - Gehe zu https://aistudio.google.com/apikey
@@ -360,7 +360,7 @@ Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigen
    }
    ```
    
-   > 💡 **Priorität**: Das Skript prüft zuerst die .env Datei, dann die Config-Datei.
+   > **Priorität**: Das Skript prüft zuerst die .env Datei, dann die Config-Datei.
 
 5. **Kindle-Datenbank kopieren**:
    - Kopiere `vocab.db` von deinem Kindle in den Ordner `put_vocab_db_here/`
@@ -374,7 +374,7 @@ Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigen
    - Öffne Anki → Datei → Importieren
    - Wähle `anki_cards/apkg_files/anki_*.apkg`
 
-## 🏗️ Projektstruktur
+## Projektstruktur
 
 ```
 Kindle-to-Anki/
@@ -403,7 +403,7 @@ Kindle-to-Anki/
 └── put_vocab_db_here/         # Hier die Kindle vocab.db ablegen
 ```
 
-## ⚙️ Konfiguration
+## Konfiguration
 
 Bearbeite `kindle_to_anki/config.py` zum Anpassen:
 
@@ -442,7 +442,7 @@ CONFIG = {
 }
 ```
 
-## 🎨 Kartendesign
+## Kartendesign
 
 ### L2→L1 Karten (Blaues Theme)
 - **Vorderseite**: L2-Wort + Kontext
@@ -457,13 +457,13 @@ CONFIG = {
 - **Rückseite**: L1-Definition + Notizen
 
 **Alle Karten enthalten:**
-- 📚 Quellbuch
-- 📝 Kontextsatz (Wort hervorgehoben oder versteckt)
-- 💡 Sprachliche Hinweise (Register, Phrasal Verbs, Idiome, etc.)
-- 🌙 Night Mode Support
-- 📱 Responsive Design
+- Quellbuch
+- Kontextsatz (Wort hervorgehoben oder versteckt)
+- Sprachliche Hinweise (Register, Phrasal Verbs, Idiome, etc.)
+- Night Mode Support
+- Responsive Design
 
-### 📸 Kartenbeispiele
+### Kartenbeispiele
 
 <div align="center">
 
@@ -478,7 +478,7 @@ CONFIG = {
 
 </div>
 
-## 🔄 Workflow
+## Workflow
 
 ```mermaid
 graph LR
@@ -497,17 +497,17 @@ graph LR
 - Python ergänzt: `Original_word`, `Lemma`, `Context_HTML`, `Book`
 - **Einsparung**: ~59% weniger Output-Tokens
 
-## 🌍 Unterstützte Sprachen
+## Unterstützte Sprachen
 
 Der Converter unterstützt derzeit folgende Sprachen:
 
 | Sprache | Code | spaCy-Modell | Status |
 |---------|------|--------------|--------|
-| 🇩🇪 Deutsch (German) | `de` | `de_core_news_sm` | ✅ Vollständig unterstützt |
-| 🇬🇧 Englisch (English) | `en` | `en_core_web_sm` | ✅ Vollständig unterstützt |
-| 🇪🇸 Spanisch (Español) | `es` | `es_core_news_sm` | ✅ Vollständig unterstützt |
-| 🇫🇷 Französisch (Français) | `fr` | `fr_core_news_sm` | ✅ Vollständig unterstützt |
-| 🇵🇱 Polnisch (Polski) | `pl` | `pl_core_news_sm` | ✅ Vollständig unterstützt |
+| 🇩🇪 Deutsch (German) | `de` | `de_core_news_sm` | Vollständig unterstützt |
+| 🇬🇧 Englisch (English) | `en` | `en_core_web_sm` | Vollständig unterstützt |
+| 🇪🇸 Spanisch (Español) | `es` | `es_core_news_sm` | Vollständig unterstützt |
+| 🇫🇷 Französisch (Français) | `fr` | `fr_core_news_sm` | Vollständig unterstützt |
+| 🇵🇱 Polnisch (Polski) | `pl` | `pl_core_news_sm` | Vollständig unterstützt |
 
 **Konfiguriere dein Sprachpaar** in `kindle_to_anki/config.py`:
 ```python
@@ -518,11 +518,11 @@ CONFIG = {
 }
 ```
 
-> 💡 **Das Skript erkennt automatisch, welche spaCy-Modelle du brauchst!** Wenn du das Skript ausführst, sagt es dir genau, welche Modelle du installieren musst, falls sie fehlen.
+> **Das Skript erkennt automatisch, welche spaCy-Modelle du brauchst!** Wenn du das Skript ausführst, sagt es dir genau, welche Modelle du installieren musst, falls sie fehlen.
 
 **Fehlt deine Sprache?** [Erstelle ein Issue auf GitHub](https://github.com/MattisBeck/kindle-to-anki/issues) und bitte um Unterstützung für deine Sprache!
 
-## 📊 Beispiel-Ausgabe
+## Beispiel-Ausgabe
 
 **Beispiel-Lauf (360 EN + 528 DE Wörter):**
 ```
@@ -535,7 +535,7 @@ CONFIG = {
 ✅ APKG erstellt: anki_de_de.apkg (528 Karten)
 ```
 
-## 🛠️ Fehlerbehebung
+## Fehlerbehebung
 
 ### spaCy-Modelle fehlen
 Das Skript sagt dir, welche Modelle du brauchst. Führe einfach den vorgeschlagenen Befehl aus, zum Beispiel:
@@ -553,7 +553,7 @@ python -m spacy download en_core_web_sm
 pip install genanki
 ```
 
-## 💡 Tipps
+## Tipps
 
 1. **Cache nutzen**: Bei weiteren Durchläufen werden nur neue Vokabeln übersetzt
 2. **Batch-Größe anpassen**: Kleinere Batches = bessere Qualität, langsamere Verarbeitung
@@ -564,7 +564,7 @@ pip install genanki
    ```
 5. **Buchtitel-Normalisierung**: Titel werden automatisch für Konsistenz normalisiert
 
-## 🤝 Mitwirken
+## Mitwirken
 
 Beiträge sind willkommen! Bitte:
 1. Forke das Repository
@@ -572,11 +572,11 @@ Beiträge sind willkommen! Bitte:
 3. Mache deine Änderungen
 4. Reiche einen Pull Request ein
 
-## 📝 Lizenz
+## Lizenz
 
 MIT-Lizenz - Frei verwendbar für private und kommerzielle Zwecke.
 
-## 🙏 Credits
+## Credits
 - **Anki** - dank Anki, hatte ich nicht nur gute Noten, sondern ohne Anki, wäre dieses Projekt nie entstanden
 - **GitHub Student Developer Pack** - Ohne das Developer pack, hätte ich keinen Zugriff auf GitHub Copilot und das Projekt wäre für mich nicht realisierbar gewesen.
 - **Gemini 2.0 Flash** (Google) - KI-generierte Definitionen
@@ -586,4 +586,4 @@ MIT-Lizenz - Frei verwendbar für private und kommerzielle Zwecke.
 
 ---
 
-Viel Erfolg beim Vokabellernen! 🎉
+Viel Erfolg beim Vokabellernen!
