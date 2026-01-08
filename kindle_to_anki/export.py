@@ -6,6 +6,18 @@ from typing import Dict, List
 from .helpers import build_field_key, format_language_pair
 
 
+def _sanitize_tsv_value(value: str, newline_replacement: str = ' ') -> str:
+    """Normalize fields so TSV rows never contain raw tabs or newlines."""
+
+    if value is None:
+        return ''
+
+    text = str(value)
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+    text = text.replace('\t', ' ')
+    return text.replace('\n', newline_replacement)
+
+
 def _ensure_bold_context(card: Dict) -> str:
     """Return context HTML with bold markup even if cache contains cloze tags."""
 
@@ -71,33 +83,34 @@ def create_tsv_file(cards: List[Dict], output_file: str, card_type: str,
     lines = [header]
 
     for card in cards:
-        notes = card.get('Notes', '')
-        context_html = context_transform(card)
+        notes = _sanitize_tsv_value(card.get('Notes', ''), newline_replacement=' ')
+        context_html = _sanitize_tsv_value(context_transform(card), newline_replacement='<br>')
+        book = _sanitize_tsv_value(card.get('Book', ''), newline_replacement=' ')
 
         if card_type == 'native_native':
-            line = f"{card.get(native_lemma_key, '')}\t"
-            line += f"{card.get('Original_word', '')}\t"
-            line += f"{card.get(native_definition_key, '')}\t"
+            line = f"{_sanitize_tsv_value(card.get(native_lemma_key, ''))}\t"
+            line += f"{_sanitize_tsv_value(card.get('Original_word', ''))}\t"
+            line += f"{_sanitize_tsv_value(card.get(native_definition_key, ''))}\t"
             line += f"{context_html}\t"
-            line += f"{card.get('Book', '')}\t"
+            line += f"{book}\t"
             line += f"{notes}\n"
 
         elif card_type == 'foreign_native':
-            line = f"{card.get(target_lemma_key, '')}\t"
-            line += f"{card.get('Original_word', '')}\t"
-            line += f"{card.get(target_definition_key, '')}\t"
-            line += f"{card.get(native_gloss_key, '')}\t"
+            line = f"{_sanitize_tsv_value(card.get(target_lemma_key, ''))}\t"
+            line += f"{_sanitize_tsv_value(card.get('Original_word', ''))}\t"
+            line += f"{_sanitize_tsv_value(card.get(target_definition_key, ''))}\t"
+            line += f"{_sanitize_tsv_value(card.get(native_gloss_key, ''))}\t"
             line += f"{context_html}\t"
-            line += f"{card.get('Book', '')}\t"
+            line += f"{book}\t"
             line += f"{notes}\n"
 
         else:  # native_foreign
-            line = f"{card.get(native_gloss_key, '')}\t"
-            line += f"{card.get(target_lemma_key, '')}\t"
-            line += f"{card.get('Original_word', '')}\t"
-            line += f"{card.get(target_definition_key, '')}\t"
+            line = f"{_sanitize_tsv_value(card.get(native_gloss_key, ''))}\t"
+            line += f"{_sanitize_tsv_value(card.get(target_lemma_key, ''))}\t"
+            line += f"{_sanitize_tsv_value(card.get('Original_word', ''))}\t"
+            line += f"{_sanitize_tsv_value(card.get(target_definition_key, ''))}\t"
             line += f"{context_html}\t"
-            line += f"{card.get('Book', '')}\t"
+            line += f"{book}\t"
             line += f"{notes}\n"
 
         lines.append(line)
