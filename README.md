@@ -1,4 +1,11 @@
- If this project helps you, **please give it a ⭐ on GitHub** — it really boosts visibility and momentum.
+📖 **[English](#english)** | 🇩🇪 **[Deutsch](#deutsch)**
+
+---
+
+<a name="english"></a>
+# English
+
+If this project helps you, **please give it a ⭐ on GitHub** — it really boosts visibility and momentum.
 
 [![GitHub Stars](https://img.shields.io/github/stars/MattisBeck/kindle-to-anki?style=social)](https://github.com/MattisBeck/kindle-to-anki/stargazers)
 
@@ -11,7 +18,7 @@ Great for learning a new language and even improving your own!
 ## Features
 
 - **Automatic Lemmatization** with spaCy
-- **AI-Generated Definitions** via Gemini 2.0 Flash
+- **AI-Generated Definitions** via Gemini 3 Flash
 - **Multilingual card types (3 formats)** – L2→L1 (translation), L1→L2 (translation, cloze), L1→L1 (definition)
 - **Direct APKG Export** with custom card design
 - **Smart Caching** - only new vocabulary is translated; so you don't need to start all over again
@@ -95,7 +102,7 @@ Kindle-to-Anki/
 │   ├── config.py              # Central runtime configuration flags
 │   ├── database.py            # Kindle vocab.db access helpers
 │   ├── export.py              # TSV/APKG writers and validation helpers
-│   ├── gemini_api.py          # Prompting logic for Gemini 2.0 Flash
+│   ├── gemini_api.py          # Prompting logic for Gemini 3 Flash
 │   ├── helpers.py             # Validation and language handling utilities
 │   ├── main.py                # Orchestrates the ETL pipeline
 │   ├── normalization.py       # Lemmatization and text cleanup utilities
@@ -133,9 +140,9 @@ CONFIG = {
    'CREATE_NATIVE_TO_NATIVE': True,
    'CREATE_APKG': True,
     
-   # Rate limits (align with current free tier: 15 RPM, 1M TPM, 200 RPD)
-   'BATCH_SIZE': 20,
-   'DELAY_BETWEEN_BATCHES': 4.5,
+   # Rate limits (check AI Studio → API Keys / Project → Rate limits; limits may vary)
+   'BATCH_SIZE': 100,
+   'DELAY_BETWEEN_BATCHES': 12.5,
    'MAX_RETRIES': 3,
    'RETRY_DELAY': 10,
     
@@ -220,7 +227,7 @@ The converter currently supports the following languages:
 ```python
 CONFIG = {
     'SOURCE_LANGUAGE': 'de',  # Your native language (cards & prompts)
-    'TARGET_LANGUAGE': 'en',  # Language you're learning (Kindle book)
+    'TARGET_LANGUAGE': 'en',  # Language you are learning (Kindle book)
     ...
 }
 ```
@@ -252,7 +259,9 @@ python -m spacy download en_core_web_sm
 ```
 
 ### Gemini API Quota Exceeded
-- Free tier: 15 RPM, 1,000,000 TPM, 200 RPD
+- Google has reduced limits significantly; the free tier may not always be enough, but you can always use a paid account.
+- Limits can vary by account; check AI Studio → API Keys / Project → Rate limits
+- Free tier: 5 RPM, 250,000 TPM, 20 RPD
 - Adjust: `BATCH_SIZE` (smaller) and `DELAY_BETWEEN_BATCHES` (longer)
 
 ### APKG Generation Failed
@@ -286,7 +295,7 @@ MIT License - Free for private and commercial use.
 ## Credits
 - **Anki** - thank you, without you, I wouldn't be so good at school
 - **GitHub Student Devloper Pack** - without GitHub Copilot, I couldn't have done this project
-- **Gemini 2.0 Flash** (Google) - AI-generated definitions
+- **Gemini 3 Flash** (Google) - AI-generated definitions
 - **spaCy** - Automatic lemmatization
 - **genanki** - APKG package generation
 ---
@@ -294,9 +303,14 @@ MIT License - Free for private and commercial use.
 Have Fun!
 
 ---
-> Gefällt dir das Projekt? **Gib ihm ein ⭐️ auf GitHub** – das hilft Sichtbarkeit & Weiterentwicklung enorm.
+
+<a name="deutsch"></a>
+# Deutsch  
+
+Wenn dir das Projekt hilft, **gib ihm bitte ein ⭐️ auf GitHub** — das hilft stark bei der Sichtbarkeit.
 
 [![GitHub Stars](https://img.shields.io/github/stars/MattisBeck/kindle-to-anki?style=social)](https://github.com/MattisBeck/kindle-to-anki/stargazers)
+
 
 # Kindle to Anki Converter (Deutsch)
 
@@ -306,7 +320,7 @@ Perfekt zum Erlernen einer neuen Sprache und sogar zur Verbesserung deiner eigen
 ## Funktionen
 
 - **Automatische Lemmatisierung** mit spaCy
-- **KI-generierte Definitionen** via Gemini 2.0 Flash
+- **KI-generierte Definitionen** via Gemini 3 Flash
 - **Mehrsprachige Kartentypen (3 Formate)** – L2→L1 (Übersetzung), L1→L2 (Übersetzung, Cloze), L1→L1 (Definition)
 - **Direkter APKG-Export** mit eigenem Kartendesign
 - **Intelligentes Caching** - nur neue Vokabeln werden übersetzt; du musst nicht von vorne anfangen
@@ -390,7 +404,7 @@ Kindle-to-Anki/
 │   ├── config.py              # Zentrale Laufzeitkonfiguration
 │   ├── database.py            # Zugriffshilfen auf die Kindle vocab.db
 │   ├── export.py              # TSV/APKG-Exporter und Validierungen
-│   ├── gemini_api.py          # Prompt-Logik für Gemini 2.0 Flash
+│   ├── gemini_api.py          # Prompt-Logik für Gemini 3 Flash
 │   ├── helpers.py             # Validierungs- und Sprachverarbeitungsfunktionen
 │   ├── main.py                # Orchestriert die ETL-Pipeline
 │   ├── normalization.py       # Lemmatisierungs- und Textbereinigungstools
@@ -428,9 +442,9 @@ CONFIG = {
    'CREATE_NATIVE_TO_NATIVE': True,
    'CREATE_APKG': True,
 
-   # Rate-Limits (aktuelle Free-Tier-Grenzen: 15 RPM, 1M TPM, 200 RPD)
-   'BATCH_SIZE': 20,
-   'DELAY_BETWEEN_BATCHES': 4.5,
+   # Rate-Limits (siehe AI Studio → API Keys / Project → Rate limits; Limits können sich ändern)
+   'BATCH_SIZE': 100,
+   'DELAY_BETWEEN_BATCHES': 12.5,
    'MAX_RETRIES': 3,
    'RETRY_DELAY': 10,
 
@@ -545,7 +559,9 @@ python -m spacy download en_core_web_sm
 ```
 
 ### Gemini API Quota überschritten
-- Free-Tier: 15 RPM, 1.000.000 TPM, 200 RPD
+- Hinweis: Google hat die Limits stark reduziert; das Free-Tier reicht jetzt nicht immer aus, man kann es aber immer mit einem Paid Account machen.
+- Limits können je nach Account variieren: AI Studio → API Keys / Project → Rate limits
+- Free-Tier: 5 RPM, 250.000 TPM, 20 RPD
 - Anpassen: `BATCH_SIZE` (kleiner) und `DELAY_BETWEEN_BATCHES` (länger)
 
 ### APKG-Generierung fehlgeschlagen
@@ -579,7 +595,7 @@ MIT-Lizenz - Frei verwendbar für private und kommerzielle Zwecke.
 ## Credits
 - **Anki** - dank Anki, hatte ich nicht nur gute Noten, sondern ohne Anki, wäre dieses Projekt nie entstanden
 - **GitHub Student Developer Pack** - Ohne das Developer pack, hätte ich keinen Zugriff auf GitHub Copilot und das Projekt wäre für mich nicht realisierbar gewesen.
-- **Gemini 2.0 Flash** (Google) - KI-generierte Definitionen
+- **Gemini 3 Flash** (Google) - KI-generierte Definitionen
 - **spaCy** - Automatische Lemmatisierung
 - **genanki** - APKG-Paket-Generierung
 - **Ultimate Geography** - Design-Inspiration

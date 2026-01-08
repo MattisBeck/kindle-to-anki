@@ -125,7 +125,7 @@ Author:"""
     authors = []
     
     try:
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-3-flash-preview')
         
         # Ask 3 times
         for i in range(3):

@@ -251,7 +251,7 @@ def process_batch_with_gemini(words_batch: List[Dict], language: str,
                 print(f"    ⚠️  Could not save raw input: {e}")
     
     try:
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-3-flash-preview')
         
         # Token counting (verbose)
         if verbose:

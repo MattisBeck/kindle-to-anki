@@ -21,9 +21,9 @@ CONFIG = {
     'ERROR_LOG': 'anki_cards/errors.log',  # Error log
     'TRANSLATED_CACHE': 'anki_cards/translated_cache.json',  # Cache for translated vocabulary
     
-    # Batch settings (to comply with current API limits: RPM 15, TPM 1,000,000, RPD 200; those may change)
-    'BATCH_SIZE': 20,  # Words per batch
-    'DELAY_BETWEEN_BATCHES': 4.5,  # Target seconds between batch starts (smart delay accounts for API response time)
+    # Batch settings (to comply with current API limits: RPM 5, TPM 250,000, RPD 20; those may change)
+    'BATCH_SIZE': 100,  # Words per batch
+    'DELAY_BETWEEN_BATCHES': 12.5,  # Target seconds between batch starts (smart delay accounts for API response time)
     'MAX_RETRIES': 3,  # Number of retry attempts on API errors
     'RETRY_DELAY': 10,  # Seconds to wait before retry
     
