@@ -2,4 +2,7 @@
 name = "kindle-to-anki"
 version = "0.1.0"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "pytest==9.0.3",
+    "pytest-mock==3.15.1",
+]
