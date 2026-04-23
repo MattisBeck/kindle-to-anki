@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import re
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -7,7 +8,7 @@ from dataclasses import dataclass
 @dataclass
 class WordRecord:
     word: str
-    language: str
+    lang: str
     stem: str
     context: str
     origin: SourceBook
@@ -18,20 +19,34 @@ class WordRecord:
 @dataclass
 class SourceBook:
     title: str
-    author: str
+    authors: str
 
 def extract_information(connection: sqlite3.Connection, cache_location: Path) -> list[WordRecord]:
     cache = get_cache_set(cache_location)
-
     cursor = connection.cursor()
-    cursor.execute("""
-        SELECT WORDS.word, WORDS.stem, WORDS.lang, LOOKUPS.usage, BOOK_INFO.authors, BOOK_INFO.title
+    sql_query= """
+        SELECT WORDS.word, WORDS.stem, WORDS.lang, LOOKUPS.usage, BOOK_INFO.authors, BOOK_INFO.title, BOOK_INFO.id, MIN(LOOKUPS.timestamp)
         FROM LOOKUPS 
         JOIN WORDS ON LOOKUPS.word_key = WORDS.id
-        JOIN BOOK_INFO ON LOOKUPS.book_key = BOOK_INFO.id;;
-    """)
+        JOIN BOOK_INFO ON LOOKUPS.book_key = BOOK_INFO.id
+        GROUP BY WORDS.stem;
+    """
+    res = cursor.execute(sql_query)
+
+    words = []
+    books = {}
+    for word, stem, lang, context, authors, title, book_id, _ in res:
+        stem = normalize_stem(stem)
+        if stem in cache:
+            continue
+        if title not in books:
+            books[book_id] = SourceBook(title, authors)
+        new_word = WordRecord(word, lang, stem, context, books[book_id])
+        words.append(new_word)
+        cache.add(stem)
 
     write_set_to_cache(cache, cache_location)
+    return words
 
 def get_cache_set(cache_location: Path) -> set:
     parent_directory = cache_location.parent
@@ -46,3 +61,6 @@ def get_cache_set(cache_location: Path) -> set:
 def write_set_to_cache(cache_set: set, cache_location: Path) -> None:
     with cache_location.open("w", encoding="utf-8") as file:
         json.dump(list(cache_set), file, indent=4)
+
+def normalize_stem(word: str) -> str:
+    return re.sub(r" \(\d+\)$", "", word)
