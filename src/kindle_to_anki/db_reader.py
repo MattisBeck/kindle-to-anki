@@ -13,9 +13,6 @@ class WordRecord:
     context: str
     origin: SourceBook
 
-    def __eq__(self, other):
-        return self.word == other.word and self.language == other.language
-
 @dataclass
 class SourceBook:
     title: str
@@ -37,13 +34,13 @@ def extract_information(connection: sqlite3.Connection, cache_location: Path) ->
     books = {}
     for word, stem, lang, context, authors, title, book_id, _ in res:
         stem = normalize_stem(stem)
-        if stem in cache:
+        if f"{lang}:{stem}" in cache:
             continue
-        if title not in books:
+        if book_id not in books:
             books[book_id] = SourceBook(title, authors)
         new_word = WordRecord(word, lang, stem, context, books[book_id])
         words.append(new_word)
-        cache.add(stem)
+        cache.add(f"{lang}:{stem}")
 
     write_set_to_cache(cache, cache_location)
     return words

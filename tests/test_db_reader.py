@@ -21,7 +21,7 @@ def db() -> Generator[Connection, Any, None]:
 
 @pytest.fixture
 def cache() -> Generator[Path, Any, None]:
-    cache_location = Path("data/cache.json")
+    cache_location = Path(__file__).parent / "data" / "cache.json"
     cache_location.write_text("[]")
 
     yield cache_location
