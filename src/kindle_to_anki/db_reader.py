@@ -5,7 +5,7 @@ from pathlib import Path
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class WordRecord:
     word: str
     lang: str
@@ -13,7 +13,7 @@ class WordRecord:
     context: str
     origin: SourceBook
 
-@dataclass
+@dataclass(frozen=True)
 class SourceBook:
     title: str
     authors: str
@@ -59,5 +59,5 @@ def write_set_to_cache(cache_set: set, cache_location: Path) -> None:
     with cache_location.open("w", encoding="utf-8") as file:
         json.dump(list(cache_set), file, indent=4)
 
-def normalize_stem(word: str) -> str:
-    return re.sub(r" \(\d+\)$", "", word)
+def normalize_stem(stem: str) -> str:
+    return re.sub(r" \(\d+\)$", "", stem)
