@@ -1,0 +1,11 @@
+.env
+.venv/
+.idea/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+/data/
+/put_vocab_db_here/*
+!/put_vocab_db_here/README.md
