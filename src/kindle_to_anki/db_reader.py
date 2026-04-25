@@ -38,6 +38,7 @@ def extract_information(connection: sqlite3.Connection, cache_location: Path) ->
             continue
         if book_id not in books:
             books[book_id] = SourceBook(title, authors)
+        context = context.replace("\n", " ")
         new_word = WordRecord(word, lang, stem, context, books[book_id])
         words.append(new_word)
         #FIXME Cache managment
