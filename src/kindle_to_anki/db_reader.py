@@ -40,6 +40,7 @@ def extract_information(connection: sqlite3.Connection, cache_location: Path) ->
             books[book_id] = SourceBook(title, authors)
         new_word = WordRecord(word, lang, stem, context, books[book_id])
         words.append(new_word)
+        #FIXME Cache managment
         cache.add(f"{lang}:{stem}")
 
     write_set_to_cache(cache, cache_location)

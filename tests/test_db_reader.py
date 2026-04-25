@@ -1,32 +1,7 @@
-from sqlite3 import Connection
-from typing import Any, Generator
-import pytest
 import sqlite3
 from pathlib import Path
-
 from kindle_to_anki.db_reader import extract_information, get_cache_set, write_set_to_cache
 from kindle_to_anki.db_reader import WordRecord
-
-@pytest.fixture
-def db() -> Generator[Connection, Any, None]:
-    sql_location = Path(__file__).parent / "data" / "mock_vocab.sql"
-    connection = sqlite3.connect(":memory:")
-    with sql_location.open() as f:
-        connection.executescript(f.read())
-
-    yield connection
-
-    connection.close()
-
-@pytest.fixture
-def cache() -> Generator[Path, Any, None]:
-    cache_location = Path(__file__).parent / "data" / "cache.json"
-    cache_location.write_text("[]")
-
-    yield cache_location
-
-    cache_location.unlink()
-
 
 def test_get_cache_set(cache: Path) -> None:
     test_data = '["Hello", "World"]'
