@@ -73,7 +73,7 @@ word: {word.word}
 context: {word.context}
 book: {book_title_to_letter[book_title]}
                      """.strip())
-    return "\n".join(block)
+    return "\n\n".join(block)
 
 
 def get_batches(words_one_language: list[WordRecord], batch_size: int) -> list[list[WordRecord]]:
