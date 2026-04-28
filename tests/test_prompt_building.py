@@ -55,12 +55,12 @@ def test_make_word_block() -> None:
 
         "VOCABULARY ITEMS:\n",
 
-        "ITEM 1",
+        "ITEM 0",
         "word: alpha",
         "context: Alpha context.",
         "book: A\n",
 
-        "ITEM 2",
+        "ITEM 1",
         "word: beta",
         "context: Beta context.",
         "book: B"

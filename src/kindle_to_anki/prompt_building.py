@@ -1,6 +1,7 @@
 from kindle_to_anki.db_reader import WordRecord
 from enum import Enum
 from dataclasses import dataclass
+from llm_translator import NativeDefinitionBatch, ForeignVocabularyBatch
 
 class PromptType(Enum):
     NATIVE_DEFINITION = "native_definition"
@@ -11,7 +12,8 @@ class PromptJob:
     prompt: str
     type: PromptType
     words: list[WordRecord]
-    response: str | None = None
+    raw_response: str | None = None
+    parsed_response: NativeDefinitionBatch | ForeignVocabularyBatch | None = None
 
 languages = {
     "en": "English",
@@ -68,7 +70,7 @@ def make_word_block(batch: list[WordRecord]) -> str:
     for i, word in enumerate(batch):
         book_title = word.origin.title
         block.append(f"""
-ITEM { i + 1 }
+ITEM {i}
 word: {word.word}
 context: {word.context}
 book: {book_title_to_letter[book_title]}
