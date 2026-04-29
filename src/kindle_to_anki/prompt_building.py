@@ -12,6 +12,8 @@ class PromptJob:
     prompt: str
     type: PromptType
     words: list[WordRecord]
+    native_language_code: str
+    source_language_code: str
     raw_response: str | None = None
     parsed_response: NativeDefinitionBatch | ForeignVocabularyBatch | None = None
 
@@ -109,7 +111,7 @@ def get_all_prompts(separated_words_by_language: dict[str, list[WordRecord]], na
         Maximum numbers of words to include in one LLM prompt
 
     :return:
-        Dictionary mapping each language code to a list of PromptJob's containing, but not limited to:
+        Dictionary mapping each language code of the word to a list of PromptJob's containing, but not limited to:
             - the prompt itself
             - the WordRecord objects which were used making the prompt
     """
@@ -125,7 +127,14 @@ def get_all_prompts(separated_words_by_language: dict[str, list[WordRecord]], na
             full_prompt = batch_to_prompt(batch, native_language_code, language_code)
             prompt_job = PromptJob(
                 prompt=full_prompt,
-                type=(PromptType.NATIVE_DEFINITION if language_code == native_language_code else PromptType.FOREIGN_VOCABULARY), words=batch
+                type=(
+                    PromptType.NATIVE_DEFINITION
+                    if language_code == native_language_code
+                    else PromptType.FOREIGN_VOCABULARY
+                ),
+                words=batch,
+                native_language_code=native_language_code,
+                source_language_code=language_code
             )
             if language_code in prompts:
                 prompts[language_code].append(prompt_job)
