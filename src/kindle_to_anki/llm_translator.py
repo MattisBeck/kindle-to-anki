@@ -5,11 +5,12 @@ from google.genai import errors
 from google.genai.types import GenerateContentConfigDict, GenerateContentResponse
 from pydantic import ValidationError
 from typing import cast
-from kindle_to_anki.models import BaseVocabularyItem, NativeDefinitionBatch, ForeignVocabularyBatch, PromptType, \
-    PromptJob
+from kindle_to_anki.models import BaseVocabularyItem, GeminiAPIError, GeminiHighDemandError, NativeDefinitionBatch, \
+    ForeignVocabularyBatch, PromptType, PromptJob
 
 ResponseBatch = NativeDefinitionBatch | ForeignVocabularyBatch
 ResponseSchema = type[NativeDefinitionBatch] | type[ForeignVocabularyBatch]
+MAX_GEMINI_ATTEMPTS = 3
 
 
 def get_required_api_key(name: str) -> str:
@@ -50,7 +51,9 @@ def call_gemini_client(client: genai.Client, job: PromptJob, response_schema:Res
             )
         )
     except errors.APIError as e:
-        raise RuntimeError(f"Gemini API Error: {e.code}\n{e.message}") from e
+        if e.code == 503:
+            raise GeminiHighDemandError(e.code, e.message) from e
+        raise GeminiAPIError(e.code, e.message) from e
 
     return response
 
@@ -107,9 +110,26 @@ def process_prompt_job(client: genai.Client, job: PromptJob, model:str) -> Respo
     :return: The validated response batch
     """
     response_schema = get_response_schema(job)
-    response = call_gemini_client(client, job, response_schema, model)
+    language_pair = f"{job.native_language_code}_{job.source_language_code}"
+    for attempt in range(MAX_GEMINI_ATTEMPTS):
+        try:
+            response = call_gemini_client(client, job, response_schema, model)
+            break
+        except GeminiHighDemandError:
+            if attempt == MAX_GEMINI_ATTEMPTS - 1:
+                print(
+                    f"Gemini high demand for {language_pair} batch with {len(job.words)} words "
+                    f"after {MAX_GEMINI_ATTEMPTS} attempts."
+                )
+                raise
+            print(
+                f"Gemini high demand for {language_pair} batch with {len(job.words)} words. "
+                f"Retry {attempt + 2}/{MAX_GEMINI_ATTEMPTS}."
+            )
     parsed_response = parse_response(response, response_schema)
     validate_response_matches_job(parsed_response, job)
+    job.gemini_response = response
+    job.parsed_response = parsed_response
     return parsed_response
 
 def process_prompt_jobs(prompts: dict[str, list[PromptJob]], api_key: str, model: str) -> dict[str, list[ResponseBatch]]:
@@ -131,4 +151,13 @@ def process_prompt_jobs(prompts: dict[str, list[PromptJob]], api_key: str, model
 
     return results
 
-
+def response_batches_to_dict(results: dict[str, list[ResponseBatch]]) -> dict[str, list[dict]]:
+    """
+    Converts response batches to JSON-compatible dictionaries.
+    :param results: Dictionary of processed response batches by language pair
+    :return: Dictionary with response batches converted to dictionaries
+    """
+    return {
+        language_pair: [batch.model_dump() for batch in batches]
+        for language_pair, batches in results.items()
+    }

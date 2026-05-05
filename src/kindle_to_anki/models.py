@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from google.genai.types import GenerateContentResponse
+from pydantic import BaseModel, Field
 
 
 @dataclass(frozen=True)
@@ -21,8 +22,6 @@ class WordRecord:
 
 
 class BaseVocabularyItem(BaseModel):  # Shared fields for both card types
-    model_config = ConfigDict(extra="forbid")  # No unwanted fields
-
     item_index: int = Field(ge=0)  # Index in prompt batch
     lemma: str  # Dictionary form of the word
     definition: str  # Context specific definition
@@ -48,12 +47,10 @@ class ForeignVocabularyItem(BaseVocabularyItem):  # result for de/en, en/de etc.
 
 
 class NativeDefinitionBatch(BaseModel):  # batch response for native definition cards
-    model_config = ConfigDict(extra="forbid")  # no unexpected top-level fields
     items: list[NativeDefinitionItem]  # results without gloss field, focused on definitions in the target language
 
 
 class ForeignVocabularyBatch(BaseModel):  # batch response for foreign vocabulary cards
-    model_config = ConfigDict(extra="forbid")  # no unexpected top-level fields
     items: list[ForeignVocabularyItem]  # results with gloss field
 
 
@@ -69,5 +66,16 @@ class PromptJob:
     words: list[WordRecord]
     native_language_code: str
     source_language_code: str
-    raw_response: str | None = None
+    gemini_response: GenerateContentResponse | None = None
     parsed_response: NativeDefinitionBatch | ForeignVocabularyBatch | None = None
+
+
+class GeminiAPIError(RuntimeError):
+    def __init__(self, code: int, message: str) -> None:
+        self.code = code
+        self.message = message
+        super().__init__(f"Gemini API Error: {code}\n{message}")
+
+
+class GeminiHighDemandError(GeminiAPIError):
+    pass

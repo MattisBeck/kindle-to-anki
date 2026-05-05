@@ -14,6 +14,7 @@ from kindle_to_anki.llm_translator import (
 )
 from kindle_to_anki.models import (
     ForeignVocabularyBatch,
+    GeminiAPIError,
     NativeDefinitionBatch,
     PromptJob,
     PromptType,
@@ -108,6 +109,7 @@ def test_call_gemini_client(mocker: MockerFixture) -> None:
     assert arguments["model"] == "gemini-test"
     assert arguments["contents"] == "prompt text"
     assert arguments["config"]["response_mime_type"] == "application/json"
+    assert arguments["config"]["response_schema"] == NativeDefinitionBatch.model_json_schema()
 
 def test_call_gemini_client_api_error(mocker: MockerFixture) -> None:
     class FakeAPIError(Exception):
@@ -119,7 +121,7 @@ def test_call_gemini_client_api_error(mocker: MockerFixture) -> None:
     prompt_job = PromptJob("prompt text", PromptType.NATIVE_DEFINITION, [], "de", "de")
     mocker.patch("kindle_to_anki.llm_translator.errors.APIError", FakeAPIError)
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(GeminiAPIError):
         call_gemini_client(client, prompt_job, NativeDefinitionBatch, "gemini-test")
 
 def test_parse_response_native_definition() -> None:
@@ -179,6 +181,8 @@ def test_process_prompt_job(mocker: MockerFixture) -> None:
     validate_mock = mocker.patch("kindle_to_anki.llm_translator.validate_response_matches_job", return_value=True)
 
     assert process_prompt_job(client, prompt_job, "gemini-test") == parsed_response
+    assert prompt_job.gemini_response == response
+    assert prompt_job.parsed_response == parsed_response
     validate_mock.assert_called_once_with(parsed_response, prompt_job)
 
 def test_process_prompt_jobs(mocker: MockerFixture) -> None:
