@@ -2,7 +2,8 @@ import sqlite3
 import pytest
 from typing import Any, Generator
 from pathlib import Path
-from kindle_to_anki.db_reader import WordRecord, extract_information
+from kindle_to_anki.db_reader import extract_information
+from kindle_to_anki.models import WordRecord
 from kindle_to_anki.prompt_building import separate_words_by_language
 
 @pytest.fixture

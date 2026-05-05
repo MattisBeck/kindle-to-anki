@@ -1,7 +1,8 @@
 import sqlite3
 from pathlib import Path
 from kindle_to_anki.db_reader import extract_information, get_cache_set, write_set_to_cache
-from kindle_to_anki.db_reader import WordRecord
+from kindle_to_anki.models import WordRecord
+
 
 def test_get_cache_set(cache: Path) -> None:
     test_data = '["Hello", "World"]'

@@ -1,14 +1,13 @@
 import pytest
 
-from kindle_to_anki.db_reader import SourceBook, WordRecord
+from kindle_to_anki.models import SourceBook, WordRecord, PromptType
 from kindle_to_anki.prompt_building import (
     get_batches,
     make_word_block,
     separate_words_by_language,
     get_language,
     batch_to_prompt,
-    get_all_prompts,
-    PromptType
+    get_all_prompts
 )
 
 def test_separate_words_by_language(word_list: list[WordRecord]) -> None:

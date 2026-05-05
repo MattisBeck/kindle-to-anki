@@ -2,21 +2,7 @@ import json
 import sqlite3
 import re
 from pathlib import Path
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True)
-class WordRecord:
-    word: str
-    lang: str
-    stem: str
-    context: str
-    origin: SourceBook
-
-@dataclass(frozen=True)
-class SourceBook:
-    title: str
-    authors: str
+from kindle_to_anki.models import SourceBook, WordRecord
 
 def extract_information(connection: sqlite3.Connection, cache_location: Path) -> list[WordRecord]:
     cache = get_cache_set(cache_location)

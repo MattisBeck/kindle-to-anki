@@ -1,21 +1,4 @@
-from kindle_to_anki.db_reader import WordRecord
-from enum import Enum
-from dataclasses import dataclass
-from llm_translator import NativeDefinitionBatch, ForeignVocabularyBatch
-
-class PromptType(Enum):
-    NATIVE_DEFINITION = "native_definition"
-    FOREIGN_VOCABULARY = "foreign_vocabulary"
-
-@dataclass
-class PromptJob:
-    prompt: str
-    type: PromptType
-    words: list[WordRecord]
-    native_language_code: str
-    source_language_code: str
-    raw_response: str | None = None
-    parsed_response: NativeDefinitionBatch | ForeignVocabularyBatch | None = None
+from kindle_to_anki.models import WordRecord, PromptType, PromptJob
 
 languages = {
     "en": "English",
@@ -98,7 +81,8 @@ def get_batches(words_one_language: list[WordRecord], batch_size: int) -> list[l
     return batches
 
 
-def get_all_prompts(separated_words_by_language: dict[str, list[WordRecord]], native_language_code: str, batch_size: int) -> dict[str, list[PromptJob]]:
+def get_all_prompts(separated_words_by_language: dict[str, list[WordRecord]], native_language_code: str, batch_size: int) -> dict[str, list[
+    PromptJob]]:
     """
     Creates LLM prompts for all languages
 
@@ -173,7 +157,7 @@ Each item contains:
 General rules:
 1. Use the context as the primary source for meaning.
 2. The first meaning must always match the meaning used in the context.
-3. Take tone, register, domain, and idiomatic usage into account.
+3. Take tone, formality, domain, and idiomatic usage into account.
 4. Preserve the input order exactly across all vocabulary items.
 5. Return exactly one result for each input item.
 6. Include the normalized lemma/canonical form in the schema field intended for it. The lemma must be in the vocabulary/source language.
@@ -195,7 +179,7 @@ Metadata rules:
 - sense: contextual meaning, only when ambiguity is medium or high; otherwise empty
 - domain: field such as legal, medical, IT; leave empty for general language
 - alternatives: up to three meaningful alternatives
-- register: style such as colloquial, formal, literary; leave empty if neutral
+- formality: style such as colloquial, formal, literary; leave empty if neutral
 - false_friend: false or a short warning string
 - collocations: up to two typical collocations
 - anchor: shortest exact word or phrase copied from the context that identifies the relevant usage; usually one word, up to five words for idioms, phrasal verbs, or fixed expressions
@@ -243,7 +227,7 @@ Task-specific rules:
 8. If the item is a fixed expression, idiom, phrasal verb, or collocation, process the expression-level meaning.
 9. Follow the grammar, orthography, capitalization, punctuation, and word-formation conventions of the respective output language.
 10. If the response schema contains collocations, write them in the source language.
-11. If the response schema contains notes, use them only for learner-relevant hints, such as nuance, register, usage restrictions, false friends, or missing one-to-one equivalence.
+11. If the response schema contains notes, use them only for learner-relevant hints, such as nuance, formality, usage restrictions, false friends, or missing one-to-one equivalence.
 12. Use the normal marker for additional meanings in the definition language, e.g. "also:" in English or "auch:" in German.
 """
     return specified_prompt.strip()
@@ -276,7 +260,7 @@ Task-specific rules:
 6. Generate the lemma/canonical form in the native language.
 7. Follow the grammar, orthography, capitalization, punctuation, and word-formation conventions of the native language.
 8. If the response schema contains alternatives, use them for close synonyms or equivalent expressions in the source language.
-9. If the response schema contains notes, use them only for definition-relevant hints, such as nuance, register, usage restrictions, or learner traps.
+9. If the response schema contains notes, use them only for definition-relevant hints, such as nuance, formality, usage restrictions, or learner traps.
 10. Use the normal marker for additional meanings in the native language, e.g. "auch:" in German.
     """
     return specified_prompt.strip()
