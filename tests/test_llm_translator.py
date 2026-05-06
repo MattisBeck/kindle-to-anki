@@ -3,7 +3,7 @@ from pytest_mock import MockerFixture
 
 from kindle_to_anki.llm_translator import (
     call_gemini_client,
-    get_gemini_api_key,
+    get_gemini_model,
     get_required_api_key,
     get_response_schema,
     parse_response,
@@ -83,9 +83,9 @@ def test_get_required_api_key_placeholder(monkeypatch: pytest.MonkeyPatch) -> No
     with pytest.raises(ValueError):
         get_required_api_key("TEST_API_KEY")
 
-def test_get_gemini_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GEMINI_API_KEY", "gemini-secret")
-    assert get_gemini_api_key() == "gemini-secret"
+def test_get_gemini_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-test")
+    assert get_gemini_model() == "gemini-test"
 
 def test_get_response_schema_native_definition() -> None:
     prompt_job = PromptJob("", PromptType.NATIVE_DEFINITION, [], "de", "de")

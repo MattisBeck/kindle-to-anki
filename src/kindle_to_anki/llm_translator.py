@@ -11,17 +11,42 @@ from kindle_to_anki.models import BaseVocabularyItem, GeminiAPIError, GeminiHigh
 ResponseBatch = NativeDefinitionBatch | ForeignVocabularyBatch
 ResponseSchema = type[NativeDefinitionBatch] | type[ForeignVocabularyBatch]
 MAX_GEMINI_ATTEMPTS = 3
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+
+
+def get_environment_value(name: str, default: str | None = None, placeholder: str | None = None) -> str:
+    """
+    Reads a value from the environment, optionally falling back to a default.
+    :param name: Environment variable name
+    :param default: Value to return when the environment variable is not set
+    :param placeholder: Placeholder value that should be treated as missing
+    :return: Environment value or default
+    """
+    load_dotenv()
+    value = os.getenv(name)
+    if value and value != placeholder:
+        return value
+    if default is not None:
+        return default
+    else:
+        raise ValueError(f"{name} is not set in environment variables.")
 
 
 def get_required_api_key(name: str) -> str:
-    load_dotenv()
-    api_key = os.getenv(name)
-    if not api_key or api_key == "your_api_key_here":
-        raise ValueError(f"{name} is not set in environment variables.")
-    return api_key
+    """
+    Reads a required API key from the environment.
+    :param name: Environment variable name
+    :return: API key value
+    """
+    return get_environment_value(name, placeholder="your_api_key_here")
 
-def get_gemini_api_key() -> str:
-    return get_required_api_key("GEMINI_API_KEY")
+
+def get_gemini_model() -> str:
+    """
+    Reads the Gemini model from the environment, falling back to the default model.
+    :return: Gemini model identifier
+    """
+    return get_environment_value("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 
 def get_response_schema(prompt_job: PromptJob) -> ResponseSchema:
     if prompt_job.type == PromptType.NATIVE_DEFINITION:

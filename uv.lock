@@ -277,6 +277,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "google-genai" },
+    { name = "pydantic" },
     { name = "pytest" },
     { name = "pytest-mock" },
     { name = "python-dotenv" },
@@ -285,6 +286,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "google-genai", specifier = "==1.73.1" },
+    { name = "pydantic", specifier = ">=2.13.3" },
     { name = "pytest", specifier = "==9.0.3" },
     { name = "pytest-mock", specifier = "==3.15.1" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
