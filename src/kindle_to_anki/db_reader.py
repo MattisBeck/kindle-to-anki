@@ -20,18 +20,24 @@ def extract_information(connection: sqlite3.Connection, cache_location: Path) ->
     books = {}
     for word, stem, lang, context, authors, title, book_id, _ in res:
         stem = normalize_stem(stem)
-        if f"{lang}:{stem}" in cache:
+        if get_cache_key(lang, stem) in cache:
             continue
         if book_id not in books:
             books[book_id] = SourceBook(title, authors)
         context = context.replace("\n", " ")
         new_word = WordRecord(word, lang, stem, context, books[book_id])
         words.append(new_word)
-        #FIXME Cache managment
-        cache.add(f"{lang}:{stem}")
 
-    write_set_to_cache(cache, cache_location)
     return words
+
+def get_cache_key(language_code: str, stem: str) -> str:
+    return f"{language_code}:{stem}"
+
+def add_words_to_cache(words: list[WordRecord], cache_location: Path) -> None:
+    cache = get_cache_set(cache_location)
+    for word in words:
+        cache.add(get_cache_key(word.lang, word.stem))
+    write_set_to_cache(cache, cache_location)
 
 def get_cache_set(cache_location: Path) -> set:
     parent_directory = cache_location.parent

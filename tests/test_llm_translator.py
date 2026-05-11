@@ -1,6 +1,9 @@
+from pathlib import Path
+
 import pytest
 from pytest_mock import MockerFixture
 
+from kindle_to_anki.db_reader import get_cache_set
 from kindle_to_anki.llm_translator import (
     call_gemini_client,
     get_gemini_model,
@@ -205,6 +208,37 @@ def test_process_prompt_jobs(mocker: MockerFixture) -> None:
 
     assert results == {"de_de": [native_response], "de_en": [foreign_response]}
     assert process_mock.call_count == 2
+
+def test_process_prompt_jobs_updates_cache_after_success(mocker: MockerFixture, tmp_path: Path) -> None:
+    client = mocker.Mock()
+    client_context = mocker.Mock()
+    client_context.__enter__ = mocker.Mock(return_value=client)
+    client_context.__exit__ = mocker.Mock(return_value=None)
+    mocker.patch("kindle_to_anki.llm_translator.genai.Client", return_value=client_context)
+
+    native_response = NativeDefinitionBatch.model_validate_json(get_native_json())
+    mocker.patch("kindle_to_anki.llm_translator.process_prompt_job", return_value=native_response)
+    cache_location = tmp_path / "cache.json"
+    prompt_job = PromptJob("", PromptType.NATIVE_DEFINITION, [get_word()], "de", "de")
+
+    process_prompt_jobs({"de": [prompt_job]}, "api-key", "gemini-test", cache_location)
+
+    assert get_cache_set(cache_location) == {"de:Haus"}
+
+def test_process_prompt_jobs_does_not_cache_failed_job(mocker: MockerFixture, tmp_path: Path) -> None:
+    client = mocker.Mock()
+    client_context = mocker.Mock()
+    client_context.__enter__ = mocker.Mock(return_value=client)
+    client_context.__exit__ = mocker.Mock(return_value=None)
+    mocker.patch("kindle_to_anki.llm_translator.genai.Client", return_value=client_context)
+    mocker.patch("kindle_to_anki.llm_translator.process_prompt_job", side_effect=ValueError("invalid response"))
+    cache_location = tmp_path / "cache.json"
+    prompt_job = PromptJob("", PromptType.NATIVE_DEFINITION, [get_word()], "de", "de")
+
+    with pytest.raises(ValueError):
+        process_prompt_jobs({"de": [prompt_job]}, "api-key", "gemini-test", cache_location)
+
+    assert get_cache_set(cache_location) == set()
 
 def test_response_batches_to_dict() -> None:
     response = NativeDefinitionBatch.model_validate_json(get_native_json())

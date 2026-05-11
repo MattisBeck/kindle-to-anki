@@ -1,10 +1,12 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from google import genai
 from google.genai import errors
 from google.genai.types import GenerateContentConfigDict, GenerateContentResponse
 from pydantic import ValidationError
 from typing import cast
+from kindle_to_anki.db_reader import add_words_to_cache
 from kindle_to_anki.models import BaseVocabularyItem, GeminiAPIError, GeminiHighDemandError, NativeDefinitionBatch, \
     ForeignVocabularyBatch, PromptType, PromptJob
 
@@ -157,12 +159,18 @@ def process_prompt_job(client: genai.Client, job: PromptJob, model:str) -> Respo
     job.parsed_response = parsed_response
     return parsed_response
 
-def process_prompt_jobs(prompts: dict[str, list[PromptJob]], api_key: str, model: str) -> dict[str, list[ResponseBatch]]:
+def process_prompt_jobs(
+        prompts: dict[str, list[PromptJob]],
+        api_key: str,
+        model: str,
+        cache_location: Path | None = None
+) -> dict[str, list[ResponseBatch]]:
     """
 
     :param prompts: Dictionary of prompt jobs, from get_all_prompts
     :param api_key: Gemini API key
     :param model: Gemini model (e.g. "gemini-3-flash-preview")
+    :param cache_location: Optional cache file path for successfully processed words
     :return: A dictionary mapping each language pair to a list of validated batch responses
     """
     results: dict[str, list[ResponseBatch]] = {}
@@ -172,6 +180,8 @@ def process_prompt_jobs(prompts: dict[str, list[PromptJob]], api_key: str, model
             for job in prompt_group:
                 language_pair = f"{job.native_language_code}_{job.source_language_code}"
                 processed_response = process_prompt_job(client, job, model)
+                if cache_location is not None:
+                    add_words_to_cache(job.words, cache_location)
                 results.setdefault(language_pair, []).append(processed_response)
 
     return results
