@@ -1,31 +1,7 @@
-from sqlite3 import Connection
-from typing import Any, Generator
-import pytest
 import sqlite3
 from pathlib import Path
-
-from kindle_to_anki.db_reader import extract_information, get_cache_set, write_set_to_cache
-from kindle_to_anki.db_reader import WordRecord
-
-@pytest.fixture
-def db() -> Generator[Connection, Any, None]:
-    sql_location = Path(__file__).parent / "data" / "mock_vocab.sql"
-    connection = sqlite3.connect(":memory:")
-    with sql_location.open() as f:
-        connection.executescript(f.read())
-
-    yield connection
-
-    connection.close()
-
-@pytest.fixture
-def cache() -> Generator[Path, Any, None]:
-    cache_location = Path(__file__).parent / "data" / "cache.json"
-    cache_location.write_text("[]")
-
-    yield cache_location
-
-    cache_location.unlink()
+from kindle_to_anki.db_reader import add_words_to_cache, extract_information, get_cache_set, write_set_to_cache
+from kindle_to_anki.models import SourceBook, WordRecord
 
 
 def test_get_cache_set(cache: Path) -> None:
@@ -62,6 +38,25 @@ def test_extract_information(db: sqlite3.Connection, cache: Path) -> None:
     books = {word.origin for word in word_list}
     assert len(books) == 3
 
-    # Test for no duplicates; all entries should already be in the cache.
+    # Reading the database should not mark words as processed.
+    assert get_cache_set(cache) == set()
+
+def test_extract_information_skips_cached_words(db: sqlite3.Connection, cache: Path) -> None:
+    write_set_to_cache({"de:Bug", "en:cloud"}, cache)
+
     word_list = extract_information(db, cache)
-    assert len(word_list) == 0
+
+    assert len(word_list) == 8
+    assert all(not (word.lang == "de" and word.stem == "Bug") for word in word_list)
+    assert all(not (word.lang == "en" and word.stem == "cloud") for word in word_list)
+
+def test_add_words_to_cache(cache: Path) -> None:
+    book = SourceBook("Book", "Author")
+    word_list = [
+        WordRecord("Bug", "de", "Bug", "Context", book),
+        WordRecord("clouds", "en", "cloud", "Context", book),
+    ]
+
+    add_words_to_cache(word_list, cache)
+
+    assert get_cache_set(cache) == {"de:Bug", "en:cloud"}
