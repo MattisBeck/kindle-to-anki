@@ -24,6 +24,7 @@ NOTES_SEPARATOR = " | "
 GENERIC_DOMAINS = {"", "general", "generic", "allgemein", "neutral", "none", "standard"}
 NEUTRAL_FORMALITY = {"", "neutral", "standard", "normal", "allgemein"}
 FOREIGN_NATIVE = "foreign_native"
+NATIVE_FOREIGN = "native_foreign"
 NATIVE_NATIVE = "native_native"
 # Keep these field names stable. Anki matches imported notes by model fields and GUID
 MODEL_FIELDS = [
@@ -37,6 +38,7 @@ MODEL_FIELDS = [
 ]
 CARD_TYPE_LABELS = {
     FOREIGN_NATIVE: "Foreign Vocabulary Card",
+    NATIVE_FOREIGN: "Reverse Vocabulary Card",
     NATIVE_NATIVE: "Native Vocabulary Definition",
 }
 # Each card type shares the same fields, but uses its own front/back templates and accent color
@@ -45,6 +47,11 @@ CARD_TYPE_TEMPLATES = {
         "foreign_native_front.html",
         "foreign_native_back.html",
         "answer_foreign.css",
+    ),
+    NATIVE_FOREIGN: (
+        "native_foreign_front.html",
+        "native_foreign_back.html",
+        "answer_reverse.css",
     ),
     NATIVE_NATIVE: (
         "native_native_front.html",
@@ -114,6 +121,23 @@ def highlight_context(context: str, anchor: str) -> str:
     return escaped_context.replace(escaped_anchor, f"<b>{escaped_anchor}</b>", 1)
 
 
+def cloze_context(context: str, anchor: str, fallback_word: str = "") -> str:
+    """
+    Escapes context text and hides the first matching vocabulary form as a cloze.
+    :param context: Kindle context sentence or passage
+    :param anchor: Short Gemini anchor identifying the relevant usage
+    :param fallback_word: Original Kindle word to use if the anchor is not found
+    :return: HTML-safe context with a cloze deletion around the vocabulary form
+    """
+    escaped_context = html.escape(context)
+    candidates = sorted({anchor.strip(), fallback_word.strip()}, key=len, reverse=True)
+    for candidate in candidates:
+        escaped_candidate = html.escape(candidate)
+        if escaped_candidate and escaped_candidate in escaped_context:
+            return escaped_context.replace(escaped_candidate, f"{{{{c1::{escaped_candidate}}}}}", 1)
+    return escaped_context
+
+
 def prompt_jobs_to_anki_cards(prompts: dict[str, list[PromptJob]]) -> dict[str, list[AnkiCard]]:
     """
     Converts processed prompt jobs to AnkiCard objects grouped by language pair.
@@ -133,6 +157,16 @@ def prompt_jobs_to_anki_cards(prompts: dict[str, list[PromptJob]]) -> dict[str, 
                 cards_by_language_pair.setdefault(language_pair, []).append(
                     vocabulary_item_to_anki_card(job, item, job.words[item.item_index], language_pair)
                 )
+                if isinstance(item, ForeignVocabularyItem):
+                    reverse_language_pair = get_language_pair(job.native_language_code, job.source_language_code)
+                    cards_by_language_pair.setdefault(reverse_language_pair, []).append(
+                        vocabulary_item_to_reverse_anki_card(
+                            job,
+                            item,
+                            job.words[item.item_index],
+                            reverse_language_pair,
+                        )
+                    )
     return cards_by_language_pair
 
 
@@ -160,6 +194,36 @@ def vocabulary_item_to_anki_card(
         definition=item.definition,
         gloss=gloss,
         context_html=highlight_context(word.context, item.anchor),
+        book_title=word.origin.title,
+        book_authors=word.origin.authors,
+        notes=build_notes(item),
+        guid_key=f"{language_pair}:{word.stem}",
+    )
+
+
+def vocabulary_item_to_reverse_anki_card(
+    job: PromptJob,
+    item: ForeignVocabularyItem,
+    word: WordRecord,
+    language_pair: str,
+) -> AnkiCard:
+    """
+    Converts one foreign vocabulary item to a reverse AnkiCard.
+    :param job: Prompt job that produced the item
+    :param item: Parsed foreign vocabulary item
+    :param word: Original Kindle word record referenced by the item
+    :param language_pair: Canonical reverse language pair key
+    :return: Prepared reverse Anki card
+    """
+    return AnkiCard(
+        language_pair=language_pair,
+        source_language_code=job.source_language_code,
+        native_language_code=job.native_language_code,
+        lemma=item.lemma,
+        original_word=word.word,
+        definition=item.definition,
+        gloss=item.gloss,
+        context_html=cloze_context(word.context, item.anchor, word.word),
         book_title=word.origin.title,
         book_authors=word.origin.authors,
         notes=build_notes(item),
@@ -199,6 +263,8 @@ def get_card_type(card: AnkiCard) -> str:
     """
     if card.source_language_code.lower() == card.native_language_code.lower():
         return NATIVE_NATIVE
+    if card.language_pair.lower() == get_language_pair(card.native_language_code, card.source_language_code):
+        return NATIVE_FOREIGN
     return FOREIGN_NATIVE
 
 
@@ -234,6 +300,8 @@ def create_anki_model(card_type: str = FOREIGN_NATIVE) -> genanki.Model:
     )
     type_label = get_type_label(card_type)
 
+    model_kwargs = {"model_type": genanki.Model.CLOZE} if card_type == NATIVE_FOREIGN else {}
+
     return genanki.Model(
         get_model_id(card_type),
         f"Kindle Vocabulary {card_type}",
@@ -250,6 +318,7 @@ def create_anki_model(card_type: str = FOREIGN_NATIVE) -> genanki.Model:
             + load_template(answer_css)
             + load_template("night_mode.css")
         ),
+        **model_kwargs,
     )
 
 

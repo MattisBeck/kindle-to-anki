@@ -7,6 +7,7 @@ from kindle_to_anki.anki_converter import (
     anki_cards_from_dict,
     anki_cards_to_dict,
     build_notes,
+    cloze_context,
     create_anki_model,
     format_book,
     get_card_guid,
@@ -14,6 +15,7 @@ from kindle_to_anki.anki_converter import (
     get_language_pair,
     highlight_context,
     load_template,
+    NATIVE_FOREIGN,
     NATIVE_NATIVE,
     prompt_jobs_to_anki_cards,
     write_apkg,
@@ -80,6 +82,22 @@ def test_highlight_context() -> None:
     assert highlighted == "The &lt;alarm&gt; kept <b>reverberating</b>."
 
 
+def test_cloze_context() -> None:
+    context = "Low clouds moved across the ridge."
+
+    clozed_context = cloze_context(context, "clouds")
+
+    assert clozed_context == "Low {{c1::clouds}} moved across the ridge."
+
+
+def test_cloze_context_uses_fallback_word() -> None:
+    context = "Low clouds moved across the ridge."
+
+    clozed_context = cloze_context(context, "cloud", "clouds")
+
+    assert clozed_context == "Low {{c1::clouds}} moved across the ridge."
+
+
 def test_prompt_jobs_to_anki_cards_foreign() -> None:
     book = SourceBook("Broken Orbit", "Evan Shore")
     word = WordRecord("clouds", "en", "cloud", "Low clouds moved across the ridge.", book)
@@ -111,6 +129,13 @@ def test_prompt_jobs_to_anki_cards_foreign() -> None:
     assert card.context_html == "Low <b>clouds</b> moved across the ridge."
     assert card.book_title == "Broken Orbit"
     assert card.guid_key == "en_de:cloud"
+
+    reverse_card = cards_by_language_pair["de_en"][0]
+    assert reverse_card.language_pair == "de_en"
+    assert reverse_card.lemma == "cloud"
+    assert reverse_card.gloss == "Wolke"
+    assert reverse_card.context_html == "Low {{c1::clouds}} moved across the ridge."
+    assert reverse_card.guid_key == "de_en:cloud"
 
 
 def test_prompt_jobs_to_anki_cards_native() -> None:
@@ -209,6 +234,25 @@ def test_get_card_type_native() -> None:
     )
 
     assert get_card_type(card) == NATIVE_NATIVE
+
+
+def test_get_card_type_reverse() -> None:
+    card = AnkiCard(
+        language_pair="de_en",
+        source_language_code="en",
+        native_language_code="de",
+        lemma="cloud",
+        original_word="clouds",
+        definition="a visible mass of condensed water vapor",
+        gloss="Wolke",
+        context_html="Low {{c1::clouds}} moved across the ridge.",
+        book_title="Broken Orbit",
+        book_authors="Evan Shore",
+        notes="",
+        guid_key="de_en:cloud",
+    )
+
+    assert get_card_type(card) == NATIVE_FOREIGN
 
 
 def test_format_book_without_author() -> None:
