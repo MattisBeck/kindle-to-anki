@@ -1,0 +1,59 @@
+.night_mode .card,
+.nightMode .card {
+  background-color: #1f1e1b;
+  color: #e8e3da;
+}
+
+.night_mode .source,
+.nightMode .source,
+.night_mode .meta,
+.nightMode .meta {
+  color: #9f978d;
+}
+
+.night_mode .type,
+.nightMode .type,
+.night_mode .answer,
+.nightMode .answer,
+.night_mode .context b,
+.nightMode .context b {
+  color: var(--accent-soft);
+}
+
+.night_mode .question,
+.nightMode .question {
+  color: #f5f0e8;
+}
+
+.night_mode .question--small,
+.nightMode .question--small {
+  color: #c9c0b5;
+}
+
+.night_mode hr,
+.nightMode hr,
+.night_mode .context,
+.nightMode .context {
+  border-color: #3c3832;
+}
+
+.night_mode .definition,
+.nightMode .definition {
+  color: #d7d0c5;
+}
+
+.night_mode .context,
+.nightMode .context {
+  color: #bdb4a9;
+}
+
+.night_mode .context-label,
+.nightMode .context-label {
+  color: #8f867b;
+}
+
+.night_mode .notes,
+.nightMode .notes {
+  background-color: #2a2722;
+  color: #d2c8bc;
+}

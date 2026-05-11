@@ -1,0 +1,15 @@
+.card {
+  --accent: #3f7a50;
+  --accent-soft: #a9d6b5;
+  --accent-muted: #5f9a70;
+}
+
+.answer {
+  max-width: 36em;
+  margin: 1.2rem auto;
+  color: var(--accent);
+  font-size: 1.6rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1.35;
+}

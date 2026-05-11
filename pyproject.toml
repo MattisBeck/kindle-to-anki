@@ -3,8 +3,9 @@ name = "kindle-to-anki"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
-    "google-genai==1.73.1",
-    "pydantic>=2.13.3",
+    "genanki==0.13.1",
+    "google-genai==2.0.1",
+    "pydantic==2.13.4",
     "pytest==9.0.3",
     "pytest-mock==3.15.1",
     "python-dotenv>=1.2.2",
@@ -13,3 +14,6 @@ dependencies = [
 [build-system]
 requires = ["setuptools >= 77.0.3"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+kindle_to_anki = ["templates/*.html", "templates/*.css"]

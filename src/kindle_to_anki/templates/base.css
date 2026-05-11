@@ -1,0 +1,132 @@
+.card {
+  --accent: #7a4a3a;
+  --accent-soft: #d8c5b9;
+  --accent-muted: #a98473;
+  padding: 2.4rem 1.35rem;
+  background-color: #fbfaf7;
+  color: #272522;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 19px;
+  line-height: 1.6;
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.source {
+  margin-bottom: 1.2rem;
+  color: #8b847b;
+  font-size: 0.84rem;
+  font-style: normal;
+}
+
+.type {
+  margin-bottom: 0.55rem;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.question {
+  margin: 1.35rem 0 1.8rem;
+  color: #181715;
+  font-size: 3.45rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.08;
+}
+
+.question--small {
+  margin: 0.4rem 0 1.2rem;
+  color: #5f5a53;
+  font-size: 1.85rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+hr {
+  width: 4.5rem;
+  margin: 1.7rem auto;
+  border: none;
+  border-top: 1px solid #ded7ce;
+}
+
+.definition {
+  max-width: 38em;
+  margin: 1.2rem auto 0;
+  color: #45413b;
+  font-size: 1.08rem;
+  font-style: normal;
+  text-align: left;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.context {
+  max-width: 40em;
+  margin: 1.7rem auto 0;
+  padding-top: 1rem;
+  border-top: 1px solid #e3ddd4;
+  color: #625d56;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  text-align: left;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.context-label {
+  margin-bottom: 0.45rem;
+  color: #9a9187;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.context b {
+  color: var(--accent);
+  font-weight: 700;
+  background-color: transparent;
+  border-bottom: 2px solid var(--accent-soft);
+  padding: 0 0.05em;
+}
+
+.notes {
+  max-width: 38em;
+  margin: 1.4rem auto 0;
+  padding: 0.75rem 0.9rem;
+  border-left: 3px solid var(--accent-muted);
+  background-color: #f4f0ea;
+  color: #5b5149;
+  font-size: 0.98rem;
+  text-align: left;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.meta {
+  margin-top: 0.9rem;
+  color: #8b847b;
+  font-size: 0.84rem;
+}
+
+@media (max-width: 600px) {
+  .card {
+    padding: 1.7rem 1rem;
+    font-size: 16px;
+  }
+
+  .question {
+    font-size: 2.1rem;
+  }
+
+  .question--small {
+    font-size: 1.35rem;
+  }
+}

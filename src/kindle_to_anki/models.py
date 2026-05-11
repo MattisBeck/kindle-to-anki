@@ -21,6 +21,22 @@ class WordRecord:
     origin: SourceBook
 
 
+@dataclass(frozen=True)
+class AnkiCard:
+    language_pair: str
+    source_language_code: str
+    native_language_code: str
+    lemma: str
+    original_word: str
+    definition: str
+    gloss: str
+    context_html: str
+    book_title: str
+    book_authors: str
+    notes: str
+    guid_key: str
+
+
 class BaseVocabularyItem(BaseModel):  # Shared fields for both card types
     item_index: int = Field(ge=0)  # Index in prompt batch
     lemma: str  # Dictionary form of the word
