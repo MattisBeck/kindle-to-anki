@@ -1,0 +1,33 @@
+<div class="card">
+  {{{{#Book}}}}
+  <div class="source">{{{{Book}}}}</div>
+  {{{{/Book}}}}
+
+  <div class="type">{type_label}</div>
+  <div class="question question--small">{{{{Lemma}}}}</div>
+
+  <hr id="answer">
+
+  {{{{#Gloss}}}}
+  <div class="answer">{{{{Gloss}}}}</div>
+  {{{{/Gloss}}}}
+
+  {{{{#Definition}}}}
+  <div class="definition">{{{{Definition}}}}</div>
+  {{{{/Definition}}}}
+
+  {{{{#Context}}}}
+  <div class="context">
+    <div class="context-label">Context</div>
+    {{{{Context}}}}
+  </div>
+  {{{{/Context}}}}
+
+  {{{{#OriginalWord}}}}
+  <div class="meta">Original: {{{{OriginalWord}}}}</div>
+  {{{{/OriginalWord}}}}
+
+  {{{{#Notes}}}}
+  <div class="notes">{{{{Notes}}}}</div>
+  {{{{/Notes}}}}
+</div>

@@ -1,0 +1,14 @@
+.card {
+  --accent: #8f3f46;
+  --accent-soft: #e0b9bd;
+  --accent-muted: #b56f76;
+}
+
+.answer {
+  margin: 1.2rem 0;
+  color: var(--accent);
+  font-size: 2.65rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.18;
+}
